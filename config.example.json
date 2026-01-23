@@ -1,0 +1,35 @@
+{
+  "zoho": {
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "access_token": "YOUR_ACCESS_TOKEN",
+    "refresh_token": "YOUR_REFRESH_TOKEN",
+    "organization_id": "YOUR_ORG_ID",
+    "region": "com"
+  },
+  "anthropic": {
+    "api_key": "YOUR_ANTHROPIC_API_KEY"
+  },
+  "category_mapping": {
+    "categories": [
+      {
+        "name": "Office Supplies",
+        "children": ["Stationery", "Computer Equipment"]
+      },
+      {
+        "name": "Software",
+        "children": ["Subscriptions", "Licenses"]
+      },
+      {
+        "name": "Travel",
+        "children": ["Airfare", "Hotels", "Meals"]
+      },
+      {
+        "name": "Professional Services"
+      },
+      {
+        "name": "Marketing"
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+# Xcode
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+.swiftpm/
+*.playground/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.moved-aside
+
+# Tuist
+Tuist/.build/
+.tuist-bin/
+*.xcworkspace
+*.xcodeproj
+
+# Dependencies
+Tuist/.build/
+.build/
+
+# Config
+config.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Derived
+build/
