@@ -1,6 +1,14 @@
 import Foundation
 
-// MARK: - Configuration Types (without file loading)
+// MARK: - Full Configuration
+
+public struct FullConfiguration: Codable {
+    public let zoho: ZohoConfiguration
+    public let anthropic: AnthropicConfiguration
+    public let categoryMapping: CategoryMappingConfig?
+}
+
+// MARK: - Configuration Types
 
 public struct ZohoConfiguration: Codable, Sendable {
     public let clientId: String

@@ -7,5 +7,6 @@ let project = Project.framework(
     dependencies: [
         .external(name: "ZohoBooksClient"),
         .external(name: "SwiftAnthropic")
-    ]
+    ],
+    resources: ["config.json"]
 )

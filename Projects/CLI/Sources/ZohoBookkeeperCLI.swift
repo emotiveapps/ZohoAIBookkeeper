@@ -17,9 +17,6 @@ struct ZohoBookkeeperCLI: AsyncParsableCommand {
 // MARK: - Common Options
 
 struct CommonOptions: ParsableArguments {
-    @Option(name: .long, help: "Path to configuration file")
-    var config: String = "./config.json"
-
     @Flag(name: .long, help: "Enable verbose output")
     var verbose: Bool = false
 }
@@ -35,7 +32,7 @@ struct ListAccounts: AsyncParsableCommand {
     @OptionGroup var options: CommonOptions
 
     func run() async throws {
-        let config = try ConfigLoader.load(from: options.config)
+        let config = try ConfigLoader.load()
         let client = try await createZohoClient(config: config, verbose: options.verbose)
 
         print("Fetching bank accounts...")
@@ -71,7 +68,7 @@ struct Clean: AsyncParsableCommand {
     var dryRun: Bool = false
 
     func run() async throws {
-        let config = try ConfigLoader.load(from: options.config)
+        let config = try ConfigLoader.load()
         let client = try await createZohoClient(config: config, verbose: options.verbose)
 
         // Get categories from config or fetch from Zoho
