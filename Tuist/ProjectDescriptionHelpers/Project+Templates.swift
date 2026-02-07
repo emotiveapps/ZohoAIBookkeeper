@@ -3,12 +3,29 @@ import ProjectDescription
 // MARK: - Constants
 
 public enum Constants {
-    public static let organizationName = "com.andrewash"
-    public static let deploymentTargets = DeploymentTargets(
-        iOS: "17.0",
-        macOS: "14.0",
-        watchOS: "10.0"
-    )
+    public static let organizationName = "com.emotiveapps"
+    public static let developmentTeam = "M7T8YXH895"
+    public static let iOSVersion = "17.0"
+    public static let macOSVersion = "14.0"
+    public static let watchOSVersion = "10.0"
+
+    public static let sharedSettings: SettingsDictionary = [
+        "DEVELOPMENT_TEAM": .string(developmentTeam),
+        "CODE_SIGN_STYLE": "Automatic",
+        "SWIFT_VERSION": "6.0",
+        "ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS": "YES",
+        "ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS": "YES",
+        "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
+        "SWIFT_EMIT_LOC_STRINGS": "YES",
+    ]
+
+    public static func deploymentTargets(for platforms: Set<Platform>) -> DeploymentTargets {
+        .multiplatform(
+            iOS: platforms.contains(.iOS) ? iOSVersion : nil,
+            macOS: platforms.contains(.macOS) ? macOSVersion : nil,
+            watchOS: platforms.contains(.watchOS) ? watchOSVersion : nil
+        )
+    }
 }
 
 // MARK: - Project Factory
@@ -23,13 +40,14 @@ public extension Project {
         sources: SourceFilesList = ["Sources/**"],
         resources: ResourceFileElements? = nil
     ) -> Project {
+        let deploymentTargets = Constants.deploymentTargets(for: platforms)
         let targets: [Target] = [
             .target(
                 name: name,
                 destinations: destinations(for: platforms),
                 product: .framework,
                 bundleId: "\(Constants.organizationName).\(name)",
-                deploymentTargets: Constants.deploymentTargets,
+                deploymentTargets: deploymentTargets,
                 sources: sources,
                 resources: resources,
                 dependencies: dependencies
@@ -39,7 +57,7 @@ public extension Project {
                 destinations: destinations(for: platforms),
                 product: .unitTests,
                 bundleId: "\(Constants.organizationName).\(name)Tests",
-                deploymentTargets: Constants.deploymentTargets,
+                deploymentTargets: deploymentTargets,
                 sources: ["Tests/**"],
                 dependencies: [.target(name: name)]
             )
@@ -48,6 +66,7 @@ public extension Project {
         return Project(
             name: name,
             organizationName: Constants.organizationName,
+            settings: .settings(base: Constants.sharedSettings),
             targets: targets
         )
     }
@@ -64,18 +83,16 @@ public extension Project {
                 destinations: [.mac],
                 product: .commandLineTool,
                 bundleId: "\(Constants.organizationName).\(name)",
-                deploymentTargets: Constants.deploymentTargets,
+                deploymentTargets: Constants.deploymentTargets(for: [.macOS]),
                 sources: sources,
-                dependencies: dependencies,
-                settings: .settings(
-                    base: ["SWIFT_VERSION": "6.0"]
-                )
+                dependencies: dependencies
             )
         ]
 
         return Project(
             name: name,
             organizationName: Constants.organizationName,
+            settings: .settings(base: Constants.sharedSettings),
             targets: targets
         )
     }
@@ -94,7 +111,7 @@ public extension Project {
                 destinations: [.iPhone, .iPad],
                 product: .app,
                 bundleId: "\(Constants.organizationName).\(name)",
-                deploymentTargets: Constants.deploymentTargets,
+                deploymentTargets: Constants.deploymentTargets(for: [.iOS]),
                 infoPlist: .extendingDefault(with: [
                     "UILaunchScreen": [
                         "UIColorName": "",
@@ -109,17 +126,14 @@ public extension Project {
                 sources: sources,
                 resources: resources,
                 entitlements: entitlements,
-                dependencies: dependencies,
-                settings: .settings(
-                    base: ["SWIFT_VERSION": "6.0"]
-                )
+                dependencies: dependencies
             ),
             .target(
                 name: "\(name)Tests",
                 destinations: [.iPhone, .iPad],
                 product: .unitTests,
                 bundleId: "\(Constants.organizationName).\(name)Tests",
-                deploymentTargets: Constants.deploymentTargets,
+                deploymentTargets: Constants.deploymentTargets(for: [.iOS]),
                 sources: ["Tests/**"],
                 dependencies: [.target(name: name)]
             )
@@ -128,6 +142,7 @@ public extension Project {
         return Project(
             name: name,
             organizationName: Constants.organizationName,
+            settings: .settings(base: Constants.sharedSettings),
             targets: targets
         )
     }
@@ -145,23 +160,21 @@ public extension Project {
                 destinations: [.appleWatch],
                 product: .app,
                 bundleId: "\(Constants.organizationName).\(name)",
-                deploymentTargets: Constants.deploymentTargets,
+                deploymentTargets: Constants.deploymentTargets(for: [.watchOS]),
                 infoPlist: .extendingDefault(with: [
                     "WKApplication": true,
                     "WKCompanionAppBundleIdentifier": "\(Constants.organizationName).ZohoBookkeeperApp"
                 ]),
                 sources: sources,
                 resources: resources,
-                dependencies: dependencies,
-                settings: .settings(
-                    base: ["SWIFT_VERSION": "6.0"]
-                )
+                dependencies: dependencies
             )
         ]
 
         return Project(
             name: name,
             organizationName: Constants.organizationName,
+            settings: .settings(base: Constants.sharedSettings),
             targets: targets
         )
     }
