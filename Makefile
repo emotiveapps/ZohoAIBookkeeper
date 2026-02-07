@@ -1,4 +1,4 @@
-.PHONY: generate open clean
+.PHONY: generate open clean run
 
 # Default target - generate and open
 all: generate open
@@ -12,6 +12,12 @@ generate:
 # Open the workspace
 open:
 	@open ZohoAIBookkeeper.xcworkspace
+
+# Build and run the CLI
+run:
+	@xcodebuild -workspace ZohoAIBookkeeper.xcworkspace -scheme ZohoBookkeeperCLI -configuration Debug build -quiet
+	$(eval BUILD_DIR := $(shell find ~/Library/Developer/Xcode/DerivedData/ZohoAIBookkeeper-* -type d -path "*/Build/Products/Debug" -not -path "*/Index.noindex/*" 2>/dev/null | head -1))
+	@DYLD_FRAMEWORK_PATH="$(BUILD_DIR)" "$(BUILD_DIR)/ZohoBookkeeperCLI"
 
 # Clean generated files, build artifacts, and caches
 clean:
