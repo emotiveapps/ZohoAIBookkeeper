@@ -66,6 +66,7 @@ public extension Project {
         return Project(
             name: name,
             organizationName: Constants.organizationName,
+            options: .options(automaticSchemesOptions: .disabled),
             settings: .settings(base: Constants.sharedSettings),
             targets: targets
         )
@@ -92,6 +93,7 @@ public extension Project {
         return Project(
             name: name,
             organizationName: Constants.organizationName,
+            options: .options(automaticSchemesOptions: .disabled),
             settings: .settings(base: Constants.sharedSettings),
             targets: targets
         )
@@ -142,6 +144,7 @@ public extension Project {
         return Project(
             name: name,
             organizationName: Constants.organizationName,
+            options: .options(automaticSchemesOptions: .disabled),
             settings: .settings(base: Constants.sharedSettings),
             targets: targets
         )
@@ -174,6 +177,7 @@ public extension Project {
         return Project(
             name: name,
             organizationName: Constants.organizationName,
+            options: .options(automaticSchemesOptions: .disabled),
             settings: .settings(base: Constants.sharedSettings),
             targets: targets
         )
