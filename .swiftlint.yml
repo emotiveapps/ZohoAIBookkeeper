@@ -1,0 +1,20 @@
+excluded:
+  - .build
+
+disabled_rules:
+  # This is necessary when trying to keep long function signatures below 120 characters per line.
+  - opening_brace
+
+opt_in_rules:
+  - number_separator
+
+number_separator:
+  minimum_length: 6  # Numbers with 6+ digits will require underscores
+
+custom_rules:
+  warnings_need_todo_prefix:
+    included: ".*.swift"
+    name: "Warning"
+    regex: '(#warning\(")(?![ ]*TODO)'
+    message: "Manual compiler warnings must start their message with \"TODO\" as a prefix."
+    severity: error

@@ -1,0 +1,6 @@
+--swiftversion 6.2
+--allman false
+--disable redundantSelf,redundantStaticSelf,wrapMultilineStatementBraces,redundantReturn,trailingCommas,andOperator
+--decimalgrouping 3,6
+--indent 2
+--trimwhitespace always
