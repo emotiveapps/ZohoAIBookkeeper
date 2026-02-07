@@ -12,6 +12,10 @@ DerivedData/
 
 # Tuist
 Derived/
+
+# Generated code
+Sources/Generated/
+**/Sources/Generated/
 Tuist/.build/
 .tuist/
 .tuist-bin/
