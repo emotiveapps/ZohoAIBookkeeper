@@ -17,6 +17,7 @@ public enum Constants {
         "ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS": "YES",
         "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
         "SWIFT_EMIT_LOC_STRINGS": "YES",
+        "STRING_CATALOG_GENERATE_SYMBOLS": "YES",
     ]
 
     public static func deploymentTargets(for platforms: Set<Platform>) -> DeploymentTargets {
