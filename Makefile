@@ -15,7 +15,7 @@ open:
 
 # Build and run the CLI
 run:
-	@xcodebuild -workspace ZohoAIBookkeeper.xcworkspace -scheme ZohoBookkeeperCLI -configuration Debug build -quiet
+	@xcodebuild -workspace ZohoAIBookkeeper.xcworkspace -scheme ZohoBookkeeperCLI -configuration Debug -destination "platform=macOS,arch=arm64" build -quiet
 	$(eval BUILD_DIR := $(shell find ~/Library/Developer/Xcode/DerivedData/ZohoAIBookkeeper-* -type d -path "*/Build/Products/Debug" -not -path "*/Index.noindex/*" 2>/dev/null | head -1))
 	@DYLD_FRAMEWORK_PATH="$(BUILD_DIR)" "$(BUILD_DIR)/ZohoBookkeeperCLI"
 
