@@ -39,7 +39,13 @@ public actor ClaudeService {
             system: .text(systemPrompt)
         )
 
-        let response = try await service.createMessage(parameters)
+        let response: MessageResponse
+        do {
+            response = try await service.createMessage(parameters)
+        } catch {
+            logger.error("Anthropic API request failed: \(error)")
+            throw error
+        }
 
         // Extract text from the response
         var responseText = ""
@@ -177,8 +183,8 @@ public actor ClaudeService {
             )
         } catch {
             if verbose {
-                print("Failed to parse Claude response: \(error)")
-                print("Raw response: \(response)")
+                logger.error("Failed to parse Claude response: \(error)")
+                logger.debug("Raw response: \(response)")
             }
 
             return TransactionSuggestion(

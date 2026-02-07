@@ -11,7 +11,7 @@ public actor CacheService {
         } else {
             #if os(macOS)
             let homeDir = FileManager.default.homeDirectoryForCurrentUser
-            self.cacheDirectory = homeDir.appendingPathComponent(".zoho-expense-cleaner")
+            self.cacheDirectory = homeDir.appendingPathComponent(".zoho-ai-bookeeper")
             #else
             // iOS/watchOS: Use app's documents directory
             let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -25,8 +25,18 @@ public actor CacheService {
         // Load or create cache
         let cacheFile = self.cacheDirectory.appendingPathComponent("cache.json")
         if FileManager.default.fileExists(atPath: cacheFile.path) {
-            let data = try Data(contentsOf: cacheFile)
-            self.cache = try JSONDecoder().decode(TransactionCache.self, from: data)
+            do {
+                let data = try Data(contentsOf: cacheFile)
+                guard !data.isEmpty else {
+                    logger.warning("Cache file is empty, starting fresh: \(cacheFile.path)")
+                    self.cache = TransactionCache()
+                    return
+                }
+                self.cache = try JSONDecoder().decode(TransactionCache.self, from: data)
+            } catch {
+                logger.error("Failed to load cache from \(cacheFile.path): \(error)")
+                self.cache = TransactionCache()
+            }
         } else {
             self.cache = TransactionCache()
         }

@@ -31,7 +31,7 @@ public final class AppState: ObservableObject {
         do {
             cacheService = try CacheService()
         } catch {
-            print("Failed to initialize cache service: \(error)")
+            logger.error("Failed to initialize cache service: \(error)")
         }
 
         // Load saved configuration from Keychain/UserDefaults

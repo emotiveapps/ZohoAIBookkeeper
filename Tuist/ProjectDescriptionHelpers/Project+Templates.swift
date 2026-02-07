@@ -42,6 +42,11 @@ public extension Project {
         resources: ResourceFileElements? = nil
     ) -> Project {
         let deploymentTargets = Constants.deploymentTargets(for: platforms)
+        let frameworkSettings: Settings = .settings(base: [
+            "CODE_SIGN_IDENTITY": "",
+            "ENABLE_MODULE_VERIFIER": "YES",
+            "MODULE_VERIFIER_SUPPORTED_LANGUAGES": "objective-c objective-c++",
+        ])
         let targets: [Target] = [
             .target(
                 name: name,
@@ -51,7 +56,8 @@ public extension Project {
                 deploymentTargets: deploymentTargets,
                 sources: sources,
                 resources: resources,
-                dependencies: dependencies
+                dependencies: dependencies,
+                settings: frameworkSettings
             ),
             .target(
                 name: "\(name)Tests",
