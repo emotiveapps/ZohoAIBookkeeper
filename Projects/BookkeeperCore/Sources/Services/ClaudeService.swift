@@ -4,7 +4,7 @@ import ZohoBooksClient
 
 /// Service for getting transaction categorization suggestions from Claude
 public actor ClaudeService {
-    private let service: any AnthropicService
+    private nonisolated(unsafe) let service: any AnthropicService
     private let categories: [String]
     private let verbose: Bool
 

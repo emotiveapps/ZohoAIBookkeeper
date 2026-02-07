@@ -64,7 +64,7 @@ struct SettingsView: View {
                             if appState.isConnected {
                                 Label("Connected", systemImage: "checkmark.circle.fill")
                                     .foregroundStyle(.green)
-                            } else if let error = appState.connectionError {
+                            } else if appState.connectionError != nil {
                                 Label("Error", systemImage: "exclamationmark.triangle.fill")
                                     .foregroundStyle(.red)
                             } else {

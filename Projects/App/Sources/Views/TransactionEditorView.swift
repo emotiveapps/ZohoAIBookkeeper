@@ -202,10 +202,9 @@ struct TransactionEditorView: View {
                 transactionId: "123",
                 date: "2024-01-15",
                 amount: 42.50,
+                debitOrCredit: "debit",
                 description: "AMAZON.COM*123456",
-                payee: "Amazon",
-                referenceNumber: "REF123",
-                isDebit: true,
+                referenceNumber: "REF123", payee: "Amazon",
                 accountId: "acc123"
             ),
             categories: ["Office Supplies", "Software", "Travel"],
