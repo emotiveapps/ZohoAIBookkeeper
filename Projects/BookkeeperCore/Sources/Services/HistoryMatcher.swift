@@ -10,17 +10,18 @@ public struct HistoryMatchResult: Sendable {
 /// Refines Claude's transaction suggestions using historical expense data from Zoho Books.
 /// When a vendor has been categorized before, overrides Claude's category (and description)
 /// with the historically most-used values.
-public struct HistoryMatcher: Sendable {
+/// Caches vendor lookups and expense history within a session for performance.
+public actor HistoryMatcher {
+
+    /// Cache: vendor name (lowercased) -> vendor ID (nil means not found)
+    private var vendorIdCache: [String: String?] = [:]
+
+    /// Cache: vendor ID -> expenses
+    private var expenseCache: [String: [ZBExpense]] = [:]
 
     public init() {}
 
     /// Refine a suggestion by checking Zoho expense history for the same vendor.
-    /// - Parameters:
-    ///   - suggestion: Claude's initial suggestion
-    ///   - transaction: The bank transaction being categorized
-    ///   - client: Zoho Books API client
-    ///   - bankAccountId: The bank account ID (for debug context only)
-    /// - Returns: A result containing the refined suggestion and debug lines
     public func refine(
         suggestion: TransactionSuggestion,
         transaction: ZBBankTransaction,
@@ -37,15 +38,31 @@ public struct HistoryMatcher: Sendable {
             return HistoryMatchResult(suggestion: suggestion, debugLines: debugLines)
         }
 
-        // Resolve vendor name to ID
-        guard let vendor = try await client.searchContactByName(vendorName, contactType: "vendor"),
-              let vendorId = vendor.contactId else {
+        // Resolve vendor name to ID (cached)
+        let cacheKey = vendorName.lowercased()
+        let vendorId: String?
+        if let cached = vendorIdCache[cacheKey] {
+            vendorId = cached
+        } else {
+            let vendor = try await client.searchContactByName(vendorName, contactType: "vendor")
+            vendorId = vendor?.contactId
+            vendorIdCache[cacheKey] = vendorId
+        }
+
+        guard let vendorId else {
             debugLines.append("History: vendor '\(vendorName)' not found in Zoho")
             return HistoryMatchResult(suggestion: suggestion, debugLines: debugLines)
         }
 
-        // Fetch ALL historical expenses for this vendor (no bank account filter)
-        let expenses = try await client.fetchExpenses(vendorId: vendorId)
+        // Fetch expenses for this vendor (cached)
+        let expenses: [ZBExpense]
+        if let cached = expenseCache[vendorId] {
+            expenses = cached
+        } else {
+            expenses = try await client.fetchExpenses(vendorId: vendorId)
+            expenseCache[vendorId] = expenses
+        }
+
         debugLines.append("History: \(expenses.count) prior expense(s) for '\(vendorName)'")
 
         guard !expenses.isEmpty else {
