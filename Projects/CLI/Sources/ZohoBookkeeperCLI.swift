@@ -201,12 +201,20 @@ struct Clean: AsyncParsableCommand {
             switch result {
             case .save(let editedTx):
                 if !dryRun {
-                    try await categorizeTransaction(
-                        client: client,
-                        transaction: editedTx,
-                        cacheService: cacheService,
-                        verbose: options.verbose
-                    )
+                    let spinner = TerminalSpinner(terminal: terminal, message: "Saving...")
+                    spinner.start()
+                    do {
+                        try await categorizeTransaction(
+                            client: client,
+                            transaction: editedTx,
+                            cacheService: cacheService,
+                            verbose: options.verbose
+                        )
+                        spinner.stop(message: "Saved!")
+                    } catch {
+                        spinner.stop(message: "Error: \(error.localizedDescription)")
+                        throw error
+                    }
                 }
                 processedCount += 1
                 await cacheService.markProcessed(transaction.transactionId)
