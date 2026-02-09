@@ -12,6 +12,7 @@ public final class TransactionEditorViewModel: ObservableObject {
     public let availableCategories: [String]
     public let availableVendors: [String]
     public let bankAccounts: [ZBBankAccount]
+    public let accountType: String
 
     private let claudeService: ClaudeService?
 
@@ -21,6 +22,7 @@ public final class TransactionEditorViewModel: ObservableObject {
         categories: [String],
         vendors: [String],
         bankAccounts: [ZBBankAccount],
+        accountType: String = "bank",
         claudeService: ClaudeService? = nil
     ) {
         let initialSuggestion = suggestion ?? TransactionSuggestion()
@@ -31,14 +33,16 @@ public final class TransactionEditorViewModel: ObservableObject {
         self.availableCategories = categories
         self.availableVendors = vendors
         self.bankAccounts = bankAccounts
+        self.accountType = accountType
         self.claudeService = claudeService
     }
 
-    /// Available transaction types based on debit/credit
+    /// Available transaction types based on debit/credit and account type
     public var availableTransactionTypes: [TransactionType] {
-        categorizedTransaction.transaction.isDebit
-            ? TransactionType.debitTypes
-            : TransactionType.creditTypes
+        TransactionType.availableTypes(
+            isDebit: categorizedTransaction.transaction.isDebit,
+            accountType: accountType
+        )
     }
 
     /// Request AI suggestion for the transaction
@@ -55,7 +59,8 @@ public final class TransactionEditorViewModel: ObservableObject {
             let suggestion = try await service.suggestCategorization(
                 transaction: categorizedTransaction.transaction,
                 bankAccounts: bankAccounts,
-                existingVendors: availableVendors
+                existingVendors: availableVendors,
+                accountType: accountType
             )
 
             categorizedTransaction.suggestion = suggestion

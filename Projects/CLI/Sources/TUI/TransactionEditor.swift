@@ -50,6 +50,7 @@ public final class TransactionEditor {
     private let categories: [String]
     private let vendors: [String]
     private let bankAccounts: [ZBBankAccount]
+    private let accountType: String
 
     private let boxWidth = 70
     private let boxHeight = 16
@@ -61,20 +62,21 @@ public final class TransactionEditor {
         transaction: CategorizedTransaction,
         categories: [String],
         vendors: [String],
-        bankAccounts: [ZBBankAccount]
+        bankAccounts: [ZBBankAccount],
+        accountType: String = "bank"
     ) {
         self.terminal = terminal
         self.transaction = transaction
         self.categories = categories
         self.vendors = vendors
         self.bankAccounts = bankAccounts
+        self.accountType = accountType
 
-        // Filter transaction types based on debit/credit
-        if transaction.transaction.isDebit {
-            self.transactionTypes = [.expense, .transfer, .refund, .skip]
-        } else {
-            self.transactionTypes = [.sale, .transfer, .ownerContribution, .skip]
-        }
+        // Filter transaction types based on debit/credit and account type
+        self.transactionTypes = TransactionType.availableTypes(
+            isDebit: transaction.transaction.isDebit,
+            accountType: accountType
+        )
     }
 
     /// Run the editor and return the result
@@ -190,7 +192,8 @@ public final class TransactionEditor {
         let desc = String(transaction.transaction.displayDescription.prefix(40))
         let date = transaction.transaction.date
 
-        let amountColor = transaction.transaction.isDebit ? Terminal.brightRed : Terminal.brightGreen
+        let isExpense = TransactionType.isUserExpense(isDebit: transaction.transaction.isDebit, accountType: accountType)
+        let amountColor = isExpense ? Terminal.brightRed : Terminal.brightGreen
         terminal.printAt(
             row: startRow + 1,
             col: startCol + 2,

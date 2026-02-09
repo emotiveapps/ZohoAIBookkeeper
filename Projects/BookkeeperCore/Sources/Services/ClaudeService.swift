@@ -23,10 +23,11 @@ public actor ClaudeService {
     public func suggestCategorization(
         transaction: ZBBankTransaction,
         bankAccounts: [ZBBankAccount],
-        existingVendors: [String]
+        existingVendors: [String],
+        accountType: String = "bank"
     ) async throws -> TransactionSuggestion {
         let systemPrompt = buildSystemPrompt(bankAccounts: bankAccounts)
-        let userPrompt = buildUserPrompt(transaction: transaction, existingVendors: existingVendors)
+        let userPrompt = buildUserPrompt(transaction: transaction, existingVendors: existingVendors, accountType: accountType)
 
         if verbose {
             print("Asking Claude for categorization suggestion...")
@@ -110,17 +111,21 @@ public actor ClaudeService {
         """
     }
 
-    private func buildUserPrompt(transaction: ZBBankTransaction, existingVendors: [String]) -> String {
+    private func buildUserPrompt(transaction: ZBBankTransaction, existingVendors: [String], accountType: String) -> String {
         let vendorList = existingVendors.prefix(50).joined(separator: ", ")
+        let isExpense = TransactionType.isUserExpense(isDebit: transaction.isDebit, accountType: accountType)
+        let isCreditCard = accountType.lowercased() == "credit_card"
+        let directionLabel = isExpense ? "EXPENSE/outflow" : "INCOME/inflow"
+        let accountNote = isCreditCard ? "\n        Account Type: Credit Card (purchases appear as credits in the API)" : ""
 
         return """
         Categorize this bank transaction:
 
         Date: \(transaction.date)
-        Amount: \(transaction.displayAmount) (\(transaction.isDebit ? "DEBIT/expense" : "CREDIT/income"))
+        Amount: \(transaction.displayAmount) (\(directionLabel))
         Description: \(transaction.description ?? "N/A")
         Payee: \(transaction.payee ?? "N/A")
-        Reference: \(transaction.referenceNumber ?? "N/A")
+        Reference: \(transaction.referenceNumber ?? "N/A")\(accountNote)
 
         Existing vendors in the system (for matching):
         \(vendorList.isEmpty ? "None yet" : vendorList)

@@ -107,6 +107,9 @@ struct Clean: AsyncParsableCommand {
             targetAccountId = bankAccounts[selection - 1].accountId
         }
 
+        let targetAccount = bankAccounts.first { $0.accountId == targetAccountId }
+        let accountType = targetAccount?.accountType ?? "bank"
+
         // Get vendors for suggestion matching
         print("Fetching vendors...")
         let vendors = try await client.fetchContacts(contactType: "vendor")
@@ -162,7 +165,8 @@ struct Clean: AsyncParsableCommand {
             let suggestion = try await claudeService.suggestCategorization(
                 transaction: transaction,
                 bankAccounts: bankAccounts,
-                existingVendors: vendorNames
+                existingVendors: vendorNames,
+                accountType: accountType
             )
 
             let categorizedTx = CategorizedTransaction(
@@ -176,7 +180,8 @@ struct Clean: AsyncParsableCommand {
                 transaction: categorizedTx,
                 categories: categoryList,
                 vendors: vendorNames,
-                bankAccounts: bankAccounts
+                bankAccounts: bankAccounts,
+                accountType: accountType
             )
 
             let result = editor.run()

@@ -29,4 +29,20 @@ public enum TransactionType: String, CaseIterable, Codable, Sendable {
     public static var creditTypes: [TransactionType] {
         [.sale, .transfer, .ownerContribution, .skip]
     }
+
+    /// Returns the appropriate transaction types based on the transaction's debit/credit flag
+    /// and the account type. Credit card accounts have inverted semantics:
+    /// a "credit" on a credit card is an expense (purchase), not income.
+    public static func availableTypes(isDebit: Bool, accountType: String) -> [TransactionType] {
+        let isCreditCard = accountType.lowercased() == "credit_card"
+        let isUserExpense = isCreditCard ? !isDebit : isDebit
+        return isUserExpense ? debitTypes : creditTypes
+    }
+
+    /// Whether a transaction represents an expense from the user's perspective,
+    /// accounting for credit card semantics.
+    public static func isUserExpense(isDebit: Bool, accountType: String) -> Bool {
+        let isCreditCard = accountType.lowercased() == "credit_card"
+        return isCreditCard ? !isDebit : isDebit
+    }
 }
