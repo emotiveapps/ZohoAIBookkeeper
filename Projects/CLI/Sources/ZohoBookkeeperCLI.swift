@@ -280,7 +280,10 @@ func categorizeTransaction(
         let request = ZBCategorizeExpenseRequest(
             accountId: categoryAccount?.accountId ?? "",
             vendorId: vendorId,
-            description: transaction.description
+            paidThroughAccountId: tx.accountId,
+            description: transaction.description,
+            date: tx.date,
+            amount: tx.amount
         )
 
         if verbose {

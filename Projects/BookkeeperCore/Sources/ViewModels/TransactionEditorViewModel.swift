@@ -135,7 +135,10 @@ public final class TransactionEditorViewModel: ObservableObject {
             let request = ZBCategorizeExpenseRequest(
                 accountId: categoryAccount?.accountId ?? "",
                 vendorId: vendorId,
-                description: categorizedTransaction.description
+                paidThroughAccountId: tx.accountId,
+                description: categorizedTransaction.description,
+                date: tx.date,
+                amount: tx.amount
             )
 
             try await client.categorizeAsExpense(transactionId: tx.transactionId, request: request)
