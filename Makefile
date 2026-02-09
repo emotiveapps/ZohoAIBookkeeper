@@ -6,7 +6,7 @@ all: generate open
 # Generate Xcode workspace
 generate:
 	@tuist install
-	@tuist generate
+	@tuist generate --no-open
 	@rm -f "ZohoAIBookkeeper.xcworkspace/xcshareddata/xcschemes/ZohoAIBookkeeper-Workspace.xcscheme"
 
 # Open the workspace
