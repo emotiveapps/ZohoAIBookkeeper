@@ -153,7 +153,7 @@ public final class TransactionEditor {
                 } else if currentField == .skipButton {
                     currentField = .viewOnWebButton
                     draw()
-                } else if isEditing && (currentField == .vendor || currentField == .description) {
+                } else if isEditing && currentField == .description {
                     editBuffer = ""
                     draw()
                 }
@@ -256,14 +256,12 @@ public final class TransactionEditor {
 
         // Vendor (only for expenses)
         if transaction.selectedType == .expense {
-            let vendorValue = isEditing && currentField == .vendor ? editBuffer : transaction.vendorName
-            let vendorDisplay = vendorValue.isEmpty ? "(none)" : vendorValue
-            let vendorWithClear = isEditing && currentField == .vendor && !editBuffer.isEmpty ? "\(vendorDisplay) \(Terminal.dim)[→ clear]\(Terminal.reset)\(Terminal.bgBlue)\(Terminal.esc)97m" : vendorDisplay
+            let vendorDisplay = transaction.vendorName.isEmpty ? "(none)" : transaction.vendorName
             terminal.printField(
                 row: fieldStartRow + 1,
                 col: fieldCol,
                 label: "Vendor",
-                value: vendorWithClear,
+                value: vendorDisplay,
                 selected: currentField == .vendor,
                 width: fieldWidth
             )
@@ -380,8 +378,20 @@ public final class TransactionEditor {
                 cycleFieldValue(forward: true)
             }
         case .vendor:
-            isEditing = true
-            editBuffer = transaction.vendorName
+            // Show searchable vendor picker below the editor
+            if !vendors.isEmpty {
+                let pickerStartRow = startRow + boxHeight + 1
+                let picker = VendorPicker(
+                    terminal: terminal,
+                    vendors: vendors,
+                    currentVendor: transaction.vendorName,
+                    startRow: pickerStartRow,
+                    startCol: startCol
+                )
+                if let selected = picker.run() {
+                    transaction.vendorName = selected
+                }
+            }
         case .description:
             isEditing = true
             editBuffer = transaction.description
@@ -392,8 +402,6 @@ public final class TransactionEditor {
 
     private func commitEdit() {
         switch currentField {
-        case .vendor:
-            transaction.vendorName = editBuffer
         case .description:
             transaction.description = editBuffer
         default:
@@ -421,19 +429,6 @@ public final class TransactionEditor {
                 transaction.category = categories[nextIndex]
             } else if !categories.isEmpty {
                 transaction.category = categories[0]
-            }
-
-        case .vendor:
-            // Cycle through known vendors
-            if let currentIndex = vendors.firstIndex(of: transaction.vendorName) {
-                let nextIndex = forward ?
-                    (currentIndex + 1) % vendors.count :
-                    (currentIndex - 1 + vendors.count) % vendors.count
-                transaction.vendorName = vendors[nextIndex]
-                editBuffer = transaction.vendorName
-            } else if !vendors.isEmpty {
-                transaction.vendorName = vendors[0]
-                editBuffer = transaction.vendorName
             }
 
         default:
