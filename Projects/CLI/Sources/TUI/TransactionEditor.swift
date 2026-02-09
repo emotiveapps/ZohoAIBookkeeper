@@ -52,6 +52,8 @@ public final class TransactionEditor {
     private let bankAccounts: [ZBBankAccount]
     private let accountType: String
 
+    private let debugLines: [String]
+
     private let boxWidth = 70
     private let boxHeight = 16
     private let startRow = 2
@@ -63,7 +65,8 @@ public final class TransactionEditor {
         categories: [String],
         vendors: [String],
         bankAccounts: [ZBBankAccount],
-        accountType: String = "bank"
+        accountType: String = "bank",
+        debugLines: [String] = []
     ) {
         self.terminal = terminal
         self.transaction = transaction
@@ -71,6 +74,7 @@ public final class TransactionEditor {
         self.vendors = vendors
         self.bankAccounts = bankAccounts
         self.accountType = accountType
+        self.debugLines = debugLines
 
         // Filter transaction types based on debit/credit and account type
         self.transactionTypes = TransactionType.availableTypes(
@@ -308,13 +312,25 @@ public final class TransactionEditor {
         )
 
         // Reasoning (if space allows)
+        var debugRow = startRow + boxHeight + 2
         if !transaction.suggestion.reasoning.isEmpty {
             let reasoning = String(transaction.suggestion.reasoning.prefix(boxWidth - 4))
             terminal.printAt(
-                row: startRow + boxHeight + 2,
+                row: debugRow,
                 col: startCol,
                 text: "\(Terminal.dim)AI: \(reasoning)\(Terminal.reset)"
             )
+            debugRow += 1
+        }
+
+        // History debug info
+        for line in debugLines {
+            terminal.printAt(
+                row: debugRow,
+                col: startCol,
+                text: "\(Terminal.dim)\(line)\(Terminal.reset)"
+            )
+            debugRow += 1
         }
 
         fflush(stdout)

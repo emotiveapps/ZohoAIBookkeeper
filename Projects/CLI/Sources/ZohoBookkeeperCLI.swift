@@ -169,7 +169,7 @@ struct Clean: AsyncParsableCommand {
                 existingVendors: vendorNames,
                 accountType: accountType
             )
-            let refined = try await historyMatcher.refine(
+            let historyResult = try await historyMatcher.refine(
                 suggestion: suggestion,
                 transaction: transaction,
                 client: client,
@@ -178,7 +178,7 @@ struct Clean: AsyncParsableCommand {
 
             let categorizedTx = CategorizedTransaction(
                 transaction: transaction,
-                suggestion: refined
+                suggestion: historyResult.suggestion
             )
 
             // Show editor
@@ -188,7 +188,8 @@ struct Clean: AsyncParsableCommand {
                 categories: categoryList,
                 vendors: vendorNames,
                 bankAccounts: bankAccounts,
-                accountType: accountType
+                accountType: accountType,
+                debugLines: historyResult.debugLines
             )
 
             let result = editor.run()

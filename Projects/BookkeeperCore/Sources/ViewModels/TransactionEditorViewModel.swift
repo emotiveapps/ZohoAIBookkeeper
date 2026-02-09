@@ -73,12 +73,13 @@ public final class TransactionEditorViewModel: ObservableObject {
 
             // Refine with history if Zoho client is available
             if let client = zohoClient, let accountId = bankAccountId {
-                suggestion = try await historyMatcher.refine(
+                let result = try await historyMatcher.refine(
                     suggestion: suggestion,
                     transaction: categorizedTransaction.transaction,
                     client: client,
                     bankAccountId: accountId
                 )
+                suggestion = result.suggestion
             }
 
             categorizedTransaction.suggestion = suggestion
