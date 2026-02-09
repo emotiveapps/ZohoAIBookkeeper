@@ -150,8 +150,8 @@ public final class TransactionEditor {
                 } else if currentField == .skipButton {
                     currentField = .viewOnWebButton
                     draw()
-                } else if isEditing {
-                    cycleFieldValue(forward: true)
+                } else if isEditing && (currentField == .vendor || currentField == .description) {
+                    editBuffer = ""
                     draw()
                 }
 
@@ -254,11 +254,13 @@ public final class TransactionEditor {
         // Vendor (only for expenses)
         if transaction.selectedType == .expense {
             let vendorValue = isEditing && currentField == .vendor ? editBuffer : transaction.vendorName
+            let vendorDisplay = vendorValue.isEmpty ? "(none)" : vendorValue
+            let vendorWithClear = isEditing && currentField == .vendor && !editBuffer.isEmpty ? "\(vendorDisplay) \(Terminal.dim)[→ clear]\(Terminal.reset)\(Terminal.bgBlue)\(Terminal.esc)97m" : vendorDisplay
             terminal.printField(
                 row: fieldStartRow + 1,
                 col: fieldCol,
                 label: "Vendor",
-                value: vendorValue.isEmpty ? "(none)" : vendorValue,
+                value: vendorWithClear,
                 selected: currentField == .vendor,
                 width: fieldWidth
             )
@@ -282,11 +284,13 @@ public final class TransactionEditor {
 
         // Description
         let descValue = isEditing && currentField == .description ? editBuffer : transaction.description
+        let descDisplay = descValue.isEmpty ? "" : descValue
+        let descWithClear = isEditing && currentField == .description && !editBuffer.isEmpty ? "\(descDisplay) \(Terminal.dim)[→ clear]\(Terminal.reset)\(Terminal.bgBlue)\(Terminal.esc)97m" : descDisplay
         terminal.printField(
             row: fieldStartRow + 3,
             col: fieldCol,
             label: "Desc",
-            value: descValue,
+            value: descWithClear,
             selected: currentField == .description,
             width: fieldWidth
         )
@@ -322,7 +326,7 @@ public final class TransactionEditor {
         terminal.printAt(
             row: startRow + boxHeight + 1,
             col: startCol,
-            text: "\(Terminal.dim)Tab/↑↓: Navigate | Enter: Select/Edit | ←→: Change value | Ctrl+Q: Quit\(Terminal.reset)"
+            text: "\(Terminal.dim)Tab/↑↓: Navigate | Enter: Select/Edit | Ctrl+Q: Quit\(Terminal.reset)"
         )
 
         // Reasoning (if space allows)

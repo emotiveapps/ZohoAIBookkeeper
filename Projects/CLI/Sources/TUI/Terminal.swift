@@ -257,7 +257,7 @@ public final class TerminalSpinner {
         self.timer = timer
     }
 
-    public func stop(message: String) {
+    public func stop(message: String, pause: Bool = true) {
         timer?.cancel()
         timer = nil
         terminal.printAt(
@@ -266,8 +266,9 @@ public final class TerminalSpinner {
             text: "\(Terminal.clearLine)\(Terminal.brightGreen)✓\(Terminal.reset) \(message)   "
         )
         fflush(stdout)
-        // Brief pause so the user sees the result
-        Thread.sleep(forTimeInterval: 0.5)
+        if pause {
+            Thread.sleep(forTimeInterval: 0.5)
+        }
     }
 }
 

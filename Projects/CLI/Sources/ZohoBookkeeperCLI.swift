@@ -162,19 +162,30 @@ struct Clean: AsyncParsableCommand {
         var skippedCount = 0
 
         for (index, transaction) in unprocessedTransactions.enumerated() {
-            // Get AI suggestion, then refine with history
+            // Show progress while fetching AI suggestion
+            let aiSpinner = TerminalSpinner(
+                terminal: terminal,
+                message: "[\(index + 1)/\(unprocessedTransactions.count)] Getting AI suggestion for \(transaction.displayDescription.prefix(30))..."
+            )
+            aiSpinner.start()
+
             let suggestion = try await claudeService.suggestCategorization(
                 transaction: transaction,
                 bankAccounts: bankAccounts,
                 existingVendors: vendorNames,
                 accountType: accountType
             )
+            aiSpinner.stop(message: "[\(index + 1)/\(unprocessedTransactions.count)] Checking history...", pause: false)
+
+            let historySpinner = TerminalSpinner(terminal: terminal, message: "[\(index + 1)/\(unprocessedTransactions.count)] Checking vendor history...")
+            historySpinner.start()
             let historyResult = try await historyMatcher.refine(
                 suggestion: suggestion,
                 transaction: transaction,
                 client: client,
                 bankAccountId: targetAccountId
             )
+            historySpinner.stop(message: "Ready", pause: false)
 
             let categorizedTx = CategorizedTransaction(
                 transaction: transaction,
@@ -236,9 +247,6 @@ struct Clean: AsyncParsableCommand {
                 return
             }
 
-            // Progress indicator
-            terminal.clearScreen()
-            print("Progress: \(index + 1)/\(unprocessedTransactions.count)")
         }
 
         terminal.disableRawMode()
