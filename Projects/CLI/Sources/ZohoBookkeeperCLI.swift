@@ -83,6 +83,7 @@ struct Clean: AsyncParsableCommand {
         )
 
         let cacheService = try CacheService()
+        let historyMatcher = HistoryMatcher()
 
         // Get bank accounts
         print("Fetching bank accounts...")
@@ -161,17 +162,23 @@ struct Clean: AsyncParsableCommand {
         var skippedCount = 0
 
         for (index, transaction) in unprocessedTransactions.enumerated() {
-            // Get AI suggestion
+            // Get AI suggestion, then refine with history
             let suggestion = try await claudeService.suggestCategorization(
                 transaction: transaction,
                 bankAccounts: bankAccounts,
                 existingVendors: vendorNames,
                 accountType: accountType
             )
+            let refined = try await historyMatcher.refine(
+                suggestion: suggestion,
+                transaction: transaction,
+                client: client,
+                bankAccountId: targetAccountId
+            )
 
             let categorizedTx = CategorizedTransaction(
                 transaction: transaction,
-                suggestion: suggestion
+                suggestion: refined
             )
 
             // Show editor

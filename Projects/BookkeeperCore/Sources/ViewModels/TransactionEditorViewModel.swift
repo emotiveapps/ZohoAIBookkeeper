@@ -15,6 +15,9 @@ public final class TransactionEditorViewModel: ObservableObject {
     public let accountType: String
 
     private let claudeService: ClaudeService?
+    private let historyMatcher: HistoryMatcher
+    private let zohoClient: ZohoBooksClient<ZohoOAuth>?
+    private let bankAccountId: String?
 
     public init(
         transaction: ZBBankTransaction,
@@ -23,7 +26,9 @@ public final class TransactionEditorViewModel: ObservableObject {
         vendors: [String],
         bankAccounts: [ZBBankAccount],
         accountType: String = "bank",
-        claudeService: ClaudeService? = nil
+        claudeService: ClaudeService? = nil,
+        zohoClient: ZohoBooksClient<ZohoOAuth>? = nil,
+        bankAccountId: String? = nil
     ) {
         let initialSuggestion = suggestion ?? TransactionSuggestion()
         self.categorizedTransaction = CategorizedTransaction(
@@ -35,6 +40,9 @@ public final class TransactionEditorViewModel: ObservableObject {
         self.bankAccounts = bankAccounts
         self.accountType = accountType
         self.claudeService = claudeService
+        self.historyMatcher = HistoryMatcher()
+        self.zohoClient = zohoClient
+        self.bankAccountId = bankAccountId
     }
 
     /// Available transaction types based on debit/credit and account type
@@ -56,12 +64,22 @@ public final class TransactionEditorViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let suggestion = try await service.suggestCategorization(
+            var suggestion = try await service.suggestCategorization(
                 transaction: categorizedTransaction.transaction,
                 bankAccounts: bankAccounts,
                 existingVendors: availableVendors,
                 accountType: accountType
             )
+
+            // Refine with history if Zoho client is available
+            if let client = zohoClient, let accountId = bankAccountId {
+                suggestion = try await historyMatcher.refine(
+                    suggestion: suggestion,
+                    transaction: categorizedTransaction.transaction,
+                    client: client,
+                    bankAccountId: accountId
+                )
+            }
 
             categorizedTransaction.suggestion = suggestion
             categorizedTransaction.selectedType = suggestion.transactionType
