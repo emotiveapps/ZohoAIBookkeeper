@@ -211,13 +211,18 @@ struct Clean: AsyncParsableCommand {
                             verbose: options.verbose
                         )
                         spinner.stop(message: "Saved!")
+                        processedCount += 1
+                        await cacheService.markProcessed(transaction.transactionId)
                     } catch {
                         spinner.stop(message: "Error: \(error.localizedDescription)")
-                        throw error
+                        terminal.printAt(row: 3, col: 3, text: "\(Terminal.dim)Press any key to continue...\(Terminal.reset)")
+                        _ = terminal.readKey()
+                        skippedCount += 1
                     }
+                } else {
+                    processedCount += 1
+                    await cacheService.markProcessed(transaction.transactionId)
                 }
-                processedCount += 1
-                await cacheService.markProcessed(transaction.transactionId)
 
             case .skip:
                 skippedCount += 1
