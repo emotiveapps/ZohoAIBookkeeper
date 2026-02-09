@@ -175,7 +175,7 @@ struct Clean: AsyncParsableCommand {
                 existingVendors: vendorNames,
                 accountType: accountType
             )
-            aiSpinner.stop(message: "[\(index + 1)/\(unprocessedTransactions.count)] Checking history...", pause: false)
+            aiSpinner.stop(message: "[\(index + 1)/\(unprocessedTransactions.count)] Checking history...")
 
             let historySpinner = TerminalSpinner(terminal: terminal, message: "[\(index + 1)/\(unprocessedTransactions.count)] Checking vendor history...")
             historySpinner.start()
@@ -185,7 +185,7 @@ struct Clean: AsyncParsableCommand {
                 client: client,
                 bankAccountId: targetAccountId
             )
-            historySpinner.stop(message: "Ready", pause: false)
+            historySpinner.stop(message: "Ready")
 
             let categorizedTx = CategorizedTransaction(
                 transaction: transaction,
