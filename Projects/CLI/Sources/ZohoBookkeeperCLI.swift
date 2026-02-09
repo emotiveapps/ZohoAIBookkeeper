@@ -182,6 +182,9 @@ struct Clean: AsyncParsableCommand {
             )
 
             // Show editor
+            let tx = transaction
+            let txnGroup = tx.isDebit ? "money_out" : "money_in"
+            let zohoURL = "https://books.zoho.com/app/\(config.zoho.organizationId)#/banking/transactions/details?account_id=\(targetAccountId)&bankaccount_id=\(targetAccountId)&transaction_id=\(tx.transactionId)&filter_by=Status.Uncategorized&txn_group=\(txnGroup)&txn_status=uncategorized"
             let editor = TransactionEditor(
                 terminal: terminal,
                 transaction: categorizedTx,
@@ -189,7 +192,8 @@ struct Clean: AsyncParsableCommand {
                 vendors: vendorNames,
                 bankAccounts: bankAccounts,
                 accountType: accountType,
-                debugLines: historyResult.debugLines
+                debugLines: historyResult.debugLines,
+                zohoURL: zohoURL
             )
 
             let result = editor.run()

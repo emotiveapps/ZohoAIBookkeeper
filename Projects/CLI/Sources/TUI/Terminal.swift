@@ -213,7 +213,7 @@ public final class Terminal {
     public func printButton(row: Int, col: Int, label: String, selected: Bool = false, color: String = Terminal.white) {
         moveTo(row: row, col: col)
         if selected {
-            print("\(Terminal.bgCyan)\(Terminal.bold) \(label) \(Terminal.reset)", terminator: "")
+            print("\(Terminal.bgBlue)\(Terminal.bold)\(Terminal.esc)97m \(label) \(Terminal.reset)", terminator: "")
         } else {
             print("[ \(color)\(label)\(Terminal.reset) ]", terminator: "")
         }

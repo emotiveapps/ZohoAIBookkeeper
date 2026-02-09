@@ -10,6 +10,7 @@ public enum EditableField: Int, CaseIterable {
     case description = 3
     case saveButton = 4
     case skipButton = 5
+    case viewOnWebButton = 6
 
     public var label: String {
         switch self {
@@ -19,6 +20,7 @@ public enum EditableField: Int, CaseIterable {
         case .description: return "Description"
         case .saveButton: return "SAVE"
         case .skipButton: return "SKIP"
+        case .viewOnWebButton: return "VIEW ON WEB"
         }
     }
 
@@ -27,7 +29,7 @@ public enum EditableField: Int, CaseIterable {
     }
 
     public var previous: EditableField {
-        EditableField(rawValue: (self.rawValue - 1 + EditableField.allCases.count) % EditableField.allCases.count) ?? .skipButton
+        EditableField(rawValue: (self.rawValue - 1 + EditableField.allCases.count) % EditableField.allCases.count) ?? .viewOnWebButton
     }
 }
 
@@ -42,7 +44,7 @@ public enum EditorResult {
 public final class TransactionEditor {
     private let terminal: Terminal
     private var transaction: CategorizedTransaction
-    private var currentField: EditableField = .transactionType
+    private var currentField: EditableField = .saveButton
     private var isEditing: Bool = false
     private var editBuffer: String = ""
 
@@ -53,6 +55,7 @@ public final class TransactionEditor {
     private let accountType: String
 
     private let debugLines: [String]
+    private let zohoURL: String?
 
     private let boxWidth = 70
     private let boxHeight = 16
@@ -66,7 +69,8 @@ public final class TransactionEditor {
         vendors: [String],
         bankAccounts: [ZBBankAccount],
         accountType: String = "bank",
-        debugLines: [String] = []
+        debugLines: [String] = [],
+        zohoURL: String? = nil
     ) {
         self.terminal = terminal
         self.transaction = transaction
@@ -75,6 +79,7 @@ public final class TransactionEditor {
         self.bankAccounts = bankAccounts
         self.accountType = accountType
         self.debugLines = debugLines
+        self.zohoURL = zohoURL
 
         // Filter transaction types based on debit/credit and account type
         self.transactionTypes = TransactionType.availableTypes(
@@ -127,7 +132,10 @@ public final class TransactionEditor {
                 }
 
             case .left:
-                if currentField == .skipButton {
+                if currentField == .viewOnWebButton {
+                    currentField = .skipButton
+                    draw()
+                } else if currentField == .skipButton {
                     currentField = .saveButton
                     draw()
                 } else if isEditing {
@@ -139,11 +147,12 @@ public final class TransactionEditor {
                 if currentField == .saveButton {
                     currentField = .skipButton
                     draw()
+                } else if currentField == .skipButton {
+                    currentField = .viewOnWebButton
+                    draw()
                 } else if isEditing {
                     cycleFieldValue(forward: true)
                     draw()
-                } else if currentField == .skipButton {
-                    return .skip
                 }
 
             case .enter:
@@ -152,6 +161,11 @@ public final class TransactionEditor {
                     return .save(transaction)
                 case .skipButton:
                     return .skip
+                case .viewOnWebButton:
+                    if let url = zohoURL {
+                        openInBrowser(url: url)
+                    }
+                    draw()
                 default:
                     if isEditing {
                         commitEdit()
@@ -284,24 +298,24 @@ public final class TransactionEditor {
         let buttonRow = startRow + 11
         terminal.printButton(
             row: buttonRow,
-            col: startCol + 15,
+            col: startCol + 5,
             label: "SAVE",
             selected: currentField == .saveButton,
             color: Terminal.brightGreen
         )
         terminal.printButton(
             row: buttonRow,
-            col: startCol + 30,
+            col: startCol + 20,
             label: "SKIP",
             selected: currentField == .skipButton,
             color: Terminal.brightYellow
         )
-
-        // URL
-        terminal.printAt(
-            row: startRow + 13,
-            col: startCol + 2,
-            text: "\(Terminal.dim)URL: \(Terminal.brightBlue)\(transaction.transaction.zohoURL)\(Terminal.reset)"
+        terminal.printButton(
+            row: buttonRow,
+            col: startCol + 35,
+            label: "VIEW ON WEB",
+            selected: currentField == .viewOnWebButton,
+            color: Terminal.brightBlue
         )
 
         // Help text
@@ -401,5 +415,12 @@ public final class TransactionEditor {
         default:
             break
         }
+    }
+
+    private func openInBrowser(url: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = [url]
+        try? process.run()
     }
 }
