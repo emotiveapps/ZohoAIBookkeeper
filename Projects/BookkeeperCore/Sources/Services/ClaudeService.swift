@@ -5,14 +5,16 @@ import ZohoBooksClient
 /// Service for getting transaction categorization suggestions from Claude
 public actor ClaudeService {
     private nonisolated(unsafe) let service: any AnthropicService
+    private let model: AnthropicModel
     private let categories: [String]
     private let verbose: Bool
 
-    public init(apiKey: String, categories: [String], verbose: Bool = false) {
+    public init(apiKey: String, model: AnthropicModel = .latestSonnet, categories: [String], verbose: Bool = false) {
         self.service = AnthropicServiceFactory.service(
             apiKey: apiKey,
             betaHeaders: nil
         )
+        self.model = model
         self.categories = categories
         self.verbose = verbose
     }
@@ -33,7 +35,7 @@ public actor ClaudeService {
         let message = MessageParameter.Message(role: .user, content: .text(userPrompt))
 
         let parameters = MessageParameter(
-            model: .claude37Sonnet,
+            model: model.asModel,
             messages: [message],
             maxTokens: 1024,
             system: .text(systemPrompt)
