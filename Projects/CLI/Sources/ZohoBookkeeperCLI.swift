@@ -200,6 +200,7 @@ struct Clean: AsyncParsableCommand {
                 terminal: terminal,
                 transaction: categorizedTx,
                 categories: categoryList,
+                categoryConfigs: config.categoryMapping?.categories ?? [],
                 vendors: vendorNames,
                 bankAccounts: bankAccounts,
                 accountType: accountType,

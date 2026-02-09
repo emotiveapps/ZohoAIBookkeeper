@@ -50,6 +50,7 @@ public final class TransactionEditor {
 
     private let transactionTypes: [TransactionType]
     private let categories: [String]
+    private let categoryConfigs: [CategoryConfig]
     private let vendors: [String]
     private let bankAccounts: [ZBBankAccount]
     private let accountType: String
@@ -66,6 +67,7 @@ public final class TransactionEditor {
         terminal: Terminal,
         transaction: CategorizedTransaction,
         categories: [String],
+        categoryConfigs: [CategoryConfig] = [],
         vendors: [String],
         bankAccounts: [ZBBankAccount],
         accountType: String = "bank",
@@ -75,6 +77,7 @@ public final class TransactionEditor {
         self.terminal = terminal
         self.transaction = transaction
         self.categories = categories
+        self.categoryConfigs = categoryConfigs
         self.vendors = vendors
         self.bankAccounts = bankAccounts
         self.accountType = accountType
@@ -356,9 +359,26 @@ public final class TransactionEditor {
 
     private func startEditing() {
         switch currentField {
-        case .transactionType, .category:
-            // These use cycling, not text editing
+        case .transactionType:
+            // Type uses cycling, not text editing
             cycleFieldValue(forward: true)
+        case .category:
+            // Show hierarchical picker below the editor
+            if !categoryConfigs.isEmpty {
+                let pickerStartRow = startRow + boxHeight + 1
+                let picker = CategoryPicker(
+                    terminal: terminal,
+                    categoryConfigs: categoryConfigs,
+                    currentCategory: transaction.category,
+                    startRow: pickerStartRow,
+                    startCol: startCol
+                )
+                if let selected = picker.run() {
+                    transaction.category = selected
+                }
+            } else {
+                cycleFieldValue(forward: true)
+            }
         case .vendor:
             isEditing = true
             editBuffer = transaction.vendorName
