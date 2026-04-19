@@ -9,9 +9,37 @@ struct ZohoBookkeeperCLI: AsyncParsableCommand {
         commandName: "zoho-bookkeeper",
         abstract: "AI-powered bookkeeping assistant for categorizing Zoho Books bank transactions",
         version: "1.0.0",
-        subcommands: [Clean.self, ListAccounts.self],
+        subcommands: [Clean.self, ListAccounts.self, Login.self],
         defaultSubcommand: Clean.self
     )
+}
+
+// MARK: - Login Command
+
+struct Login: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "login",
+        abstract: "Authenticate with Zoho via OAuth (opens browser)"
+    )
+
+    @Option(name: .long, help: "Local port for OAuth callback server")
+    var port: Int = 8484
+
+    @Option(name: .long, help: "Path to config.json to update with tokens")
+    var configPath: String = "Projects/BookkeeperCore/config.json"
+
+    func run() async throws {
+        let config = try ConfigLoader.load()
+        _ = try await OAuthLoginService.login(
+            config: config.zoho,
+            port: UInt16(port),
+            configPath: configPath
+        )
+        print()
+        print("Login successful!")
+        print("Access token and refresh token saved to \(configPath)")
+        print("You can now run: make run")
+    }
 }
 
 // MARK: - Common Options
