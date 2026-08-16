@@ -7,52 +7,40 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                // Pending count display
                 pendingCountView
 
-                // Last updated
                 if let lastUpdated = watchState.lastUpdated {
                     Text("Updated \(lastUpdated, style: .relative) ago")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                }
-
-                // Error message
-                if let error = watchState.errorMessage {
-                    Text(error)
+                } else {
+                    Text("Open the iPhone app to sync")
                         .font(.caption2)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
 
-                // Refresh button
                 Button {
-                    Task {
-                        await watchState.refresh()
-                    }
+                    watchState.refresh()
                 } label: {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
-                .disabled(watchState.isLoading)
             }
             .padding()
             .navigationTitle("Bookkeeper")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .task {
-            await watchState.refresh()
+        .onAppear {
+            watchState.refresh()
         }
     }
 
     private var pendingCountView: some View {
         VStack(spacing: 4) {
-            if watchState.isLoading {
-                ProgressView()
-                    .frame(height: 60)
-            } else {
-                Text("\(watchState.pendingCount)")
-                    .font(.system(size: 48, weight: .bold))
-                    .foregroundStyle(watchState.pendingCount > 0 ? .orange : .green)
-            }
+            Text("\(watchState.pendingCount)")
+                .font(.system(size: 48, weight: .bold))
+                .foregroundStyle(watchState.pendingCount > 0 ? .orange : .green)
+                .contentTransition(.numericText())
 
             Text("Pending")
                 .font(.caption)

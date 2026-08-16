@@ -41,8 +41,10 @@ public enum ConfigLoader {
         if let override = ProcessInfo.processInfo.environment["ZOHO_BOOKKEEPER_CONFIG"], !override.isEmpty {
             paths.append(URL(fileURLWithPath: override))
         }
+        #if os(macOS)
         let home = FileManager.default.homeDirectoryForCurrentUser
         paths.append(home.appendingPathComponent(".zoho-ai-bookkeeper/config.json"))
+        #endif
         return paths
     }
 }

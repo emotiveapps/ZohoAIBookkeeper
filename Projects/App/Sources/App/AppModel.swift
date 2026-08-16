@@ -183,6 +183,7 @@ public final class Workspace {
                 counts[account.accountId] = await unprocessedCount(in: transactions)
             }
             pendingCounts = counts
+            WatchSync.shared.send(totalPending: totalPendingCount)
         } catch {
             lastError = error.localizedDescription
         }
@@ -201,6 +202,7 @@ public final class Workspace {
 
     public func adjustPendingCount(accountId: String, by delta: Int) {
         pendingCounts[accountId] = max(0, (pendingCounts[accountId] ?? 0) + delta)
+        WatchSync.shared.send(totalPending: totalPendingCount)
     }
 
     /// A vendor was just created/used; keep the in-session list current.

@@ -28,13 +28,11 @@ struct PendingCountProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PendingCountEntry>) -> Void) {
-        // In a full implementation, this would:
-        // 1. Read from shared UserDefaults (App Group)
-        // 2. Or fetch from Watch Connectivity cache
-        // For now, return placeholder data
-
+        // Reads the last count synced from the iPhone (see PhoneSyncReceiver,
+        // which also reloads timelines whenever a new count arrives).
+        let stored = PendingCountStorage.read()
         let currentDate = Date()
-        let entry = PendingCountEntry(date: currentDate, pendingCount: 0)
+        let entry = PendingCountEntry(date: currentDate, pendingCount: stored.count)
 
         // Refresh every 15 minutes
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: currentDate)!
