@@ -109,16 +109,16 @@ public final class TransactionEditor {
                 }
 
             case .tab:
-                currentField = currentField.next
+                moveFocus(forward: true)
                 draw()
 
             case .shiftTab:
-                currentField = currentField.previous
+                moveFocus(forward: false)
                 draw()
 
             case .down:
                 if !isEditing {
-                    currentField = currentField.next
+                    moveFocus(forward: true)
                     draw()
                 } else {
                     cycleFieldValue(forward: true)
@@ -127,7 +127,7 @@ public final class TransactionEditor {
 
             case .up:
                 if !isEditing {
-                    currentField = currentField.previous
+                    moveFocus(forward: false)
                     draw()
                 } else {
                     cycleFieldValue(forward: false)
@@ -355,6 +355,20 @@ public final class TransactionEditor {
         fflush(stdout)
     }
 
+    /// The vendor row only applies to expenses; it renders as "N/A" otherwise
+    /// and focus must skip over it.
+    private var vendorFieldActive: Bool {
+        transaction.selectedType == .expense
+    }
+
+    private func moveFocus(forward: Bool) {
+        var field = forward ? currentField.next : currentField.previous
+        if field == .vendor && !vendorFieldActive {
+            field = forward ? field.next : field.previous
+        }
+        currentField = field
+    }
+
     private func startEditing() {
         switch currentField {
         case .transactionType:
@@ -389,7 +403,7 @@ public final class TransactionEditor {
             }
         case .vendor:
             // Show searchable vendor picker below the editor
-            if !vendors.isEmpty {
+            if vendorFieldActive && !vendors.isEmpty {
                 let pickerStartRow = startRow + boxHeight + 1
                 let picker = SearchablePicker.forFlatList(
                     terminal: terminal,
