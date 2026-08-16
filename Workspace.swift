@@ -21,11 +21,17 @@ let workspace = Workspace(
         .scheme(
             name: "ZohoBookkeeperApp",
             buildAction: .buildAction(targets: [.project(path: "Projects/App", target: "ZohoBookkeeperApp")]),
+            testAction: .targets([
+                .testableTarget(target: .project(path: "Projects/App", target: "ZohoBookkeeperAppTests"))
+            ]),
             runAction: .runAction(executable: .project(path: "Projects/App", target: "ZohoBookkeeperApp"))
         ),
         .scheme(
             name: "ZohoBookkeeperCLI",
             buildAction: .buildAction(targets: [.project(path: "Projects/CLI", target: "ZohoBookkeeperCLI")]),
+            testAction: .targets([
+                .testableTarget(target: .project(path: "Projects/BookkeeperCore", target: "BookkeeperCoreTests"))
+            ]),
             runAction: .runAction(executable: .project(path: "Projects/CLI", target: "ZohoBookkeeperCLI"))
         ),
         .scheme(

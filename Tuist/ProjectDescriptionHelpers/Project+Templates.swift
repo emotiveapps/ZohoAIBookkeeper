@@ -66,7 +66,10 @@ public extension Project {
                 bundleId: "\(Constants.organizationName).\(name)Tests",
                 deploymentTargets: deploymentTargets,
                 sources: ["Tests/**"],
-                dependencies: [.target(name: name)]
+                dependencies: [.target(name: name)],
+                // Ad-hoc signing so `xcodebuild test` works without a Mac
+                // Development certificate installed.
+                settings: .settings(base: ["CODE_SIGN_IDENTITY": "-"])
             )
         ]
 
