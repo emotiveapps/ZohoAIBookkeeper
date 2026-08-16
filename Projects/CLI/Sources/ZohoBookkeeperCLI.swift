@@ -9,7 +9,7 @@ struct ZohoBookkeeperCLI: AsyncParsableCommand {
         commandName: "zoho-bookkeeper",
         abstract: "AI-powered bookkeeping assistant for categorizing Zoho Books bank transactions",
         version: "1.0.0",
-        subcommands: [Clean.self, ListAccounts.self],
+        subcommands: [Clean.self, ListAccounts.self, Audit.self, Gaps.self, Cogs.self],
         defaultSubcommand: Clean.self
     )
 }
@@ -273,10 +273,9 @@ func createZohoClient(config: FullConfiguration, verbose: Bool) async throws -> 
 
 func fetchExpenseCategories(client: ZohoBooksClient<ZohoOAuth>) async throws -> [String] {
     let accounts = try await client.fetchAccounts()
-    return accounts
-        .filter { ($0.accountType ?? "").lowercased() == "expense" }
-        .compactMap { $0.accountName }
-        .sorted()
+    // Includes inventory/COGS accounts so LEGO resale purchases can be routed
+    // to Inventory Asset instead of a period expense.
+    return CategoryFilter.spendingCategories(from: accounts)
 }
 
 

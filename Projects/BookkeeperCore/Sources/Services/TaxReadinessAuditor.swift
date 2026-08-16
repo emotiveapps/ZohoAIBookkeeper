@@ -74,6 +74,11 @@ public struct TaxReadinessReport: Sendable {
             let affected = accounts.filter { $0.uncategorizedCount > 0 }.count
             result.append("\(totalUncategorized) uncategorized transaction(s) across \(affected) account(s)")
         }
+        // Expenses dumped into a literal "Uncategorized" category are just as
+        // unfiled as uncategorized bank transactions.
+        if let uncategorized = expenses.byCategory.first(where: { $0.name.lowercased() == "uncategorized" }) {
+            result.append("\(uncategorized.count) expense(s) totaling \(TaxReadinessReportFormatter.money(uncategorized.total)) in the \"Uncategorized\" category")
+        }
         for account in accounts where account.gaps.hasCriticalFindings {
             for finding in account.gaps.findings where finding.severity == .critical {
                 result.append("\(account.accountName): \(finding.summary)")
@@ -179,11 +184,11 @@ public actor TaxReadinessAuditor {
         )
     }
 
-    // MARK: - Pure summarization (internal for tests)
+    // MARK: - Pure summarization (public: the CLI cogs command reuses these)
 
     /// Chart accounts that hold inventory or COGS — purchases categorized here
     /// are asset/COGS activity, not period expenses.
-    static func inventoryAccountNames(in accounts: [ZBAccount]) -> Set<String> {
+    public static func inventoryAccountNames(in accounts: [ZBAccount]) -> Set<String> {
         Set(accounts.compactMap { account -> String? in
             guard let name = account.accountName else { return nil }
             let type = (account.accountType ?? "").lowercased()
@@ -193,7 +198,7 @@ public actor TaxReadinessAuditor {
         })
     }
 
-    static func summarize(
+    public static func summarize(
         expenses: [ZBExpense],
         inventoryAccountNames: Set<String>
     ) -> (TaxReadinessReport.ExpenseSummary, TaxReadinessReport.InventorySummary?) {

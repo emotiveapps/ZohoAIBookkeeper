@@ -126,13 +126,14 @@ public struct GapDetector: Sendable {
         for (previous, next) in zip(dates, dates.dropFirst()) {
             let gap = Self.days(from: previous, to: next)
             if gap >= flagThreshold {
+                let cadence = median <= 1 ? "daily" : "every ~\(median)d"
                 findings.append(GapFinding(
                     kind: .silentWindow,
                     severity: severity(gap),
                     start: previous,
                     end: next,
                     days: gap,
-                    summary: "\(gap) days with no transactions (\(Self.format(previous)) → \(Self.format(next))); this account usually posts every ~\(median)d"
+                    summary: "\(gap) days with no transactions (\(Self.format(previous)) → \(Self.format(next))); this account usually posts \(cadence)"
                 ))
             }
         }

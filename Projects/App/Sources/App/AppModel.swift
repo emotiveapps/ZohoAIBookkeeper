@@ -154,10 +154,9 @@ public final class Workspace {
                 categories = configured
             } else {
                 let accounts = try await client.fetchAccounts()
-                categories = accounts
-                    .filter { ($0.accountType ?? "").lowercased() == "expense" }
-                    .compactMap { $0.accountName }
-                    .sorted()
+                // Includes inventory/COGS accounts (LEGO resale purchases are
+                // categorized as assets, not period expenses).
+                categories = CategoryFilter.spendingCategories(from: accounts)
             }
 
             let contacts = try await client.fetchContacts(contactType: "vendor")

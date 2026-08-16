@@ -112,6 +112,9 @@ public actor ClaudeService {
         - Use "skip" for unclear transactions that need manual review
         - Confidence should be 0-100 based on how certain you are
         - Always provide a clean, standardized vendor name (e.g., "AMAZON.COM*123456" -> "Amazon")
+        - Inventory bought for resale (e.g., LEGO sets from LEGO, toy stores, or brick marketplaces) \
+        is an asset purchase, not a period expense: when an Inventory/COGS category is available, \
+        categorize such purchases there (transaction_type stays "expense")
         """
     }
 
