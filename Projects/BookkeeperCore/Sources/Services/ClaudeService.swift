@@ -134,14 +134,18 @@ public actor ClaudeService {
         """
     }
 
-    private func parseClaudeResponse(_ response: String) -> TransactionSuggestion {
+    // Internal (not private) so unit tests can exercise the parsing directly.
+    func parseClaudeResponse(_ response: String) -> TransactionSuggestion {
         // Try to extract JSON from the response
         var jsonString = response
 
-        // Handle markdown code blocks
+        // Handle markdown code blocks. Half-open range: `jsonEnd.upperBound` is the
+        // index *after* the closing brace (a closed range trapped when the response
+        // ended with "}" and otherwise grabbed a stray character).
         if let jsonStart = response.range(of: "{"),
-           let jsonEnd = response.range(of: "}", options: .backwards) {
-            jsonString = String(response[jsonStart.lowerBound...jsonEnd.upperBound])
+           let jsonEnd = response.range(of: "}", options: .backwards),
+           jsonStart.lowerBound < jsonEnd.upperBound {
+            jsonString = String(response[jsonStart.lowerBound..<jsonEnd.upperBound])
         }
 
         struct ClaudeResponse: Codable {
