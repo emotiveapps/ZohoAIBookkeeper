@@ -66,7 +66,7 @@ zoho-bookkeeper gaps --year 2025 [--account <id>]           # bank-feed outage d
 zoho-bookkeeper cogs --year 2025 --ending-inventory 5000    # periodic COGS for inventory resale
 ```
 
-`audit --export` writes markdown + CSVs to `~/.zoho-ai-bookkeeper/reports/<year>/` for your accountant. Inventory purchases (e.g. LEGO bought for resale) are categorized to Inventory/COGS accounts at purchase time and deducted via COGS at year-end — the pickers and AI suggestions understand this.
+`audit --export` writes markdown + CSVs to `./reports/<year>/` (override with `--output`; the directory is gitignored since it holds real financial data) for your accountant. Inventory purchases (e.g. LEGO bought for resale) are categorized to Inventory/COGS accounts at purchase time and deducted via COGS at year-end — the pickers and AI suggestions understand this.
 
 Editor keys: `Tab`/`↑↓` navigate · `Enter` select/edit · type to filter in pickers · `Esc` cancel · `Ctrl+Q` quit.
 

@@ -86,7 +86,8 @@ BookkeeperCore (framework; @_exported imports ZohoBooksClient)
   CLI   ZohoBookkeeperCLI.swift (`clean` + `list-accounts`; review loop with
         do/catch-guarded cache saves)
         AuditCommands.swift (`audit` / `gaps` / `cogs` — tax-readiness reports,
-        feed-gap sparklines, periodic COGS; exports to ~/.zoho-ai-bookkeeper/reports/)
+        feed-gap sparklines, periodic COGS; exports to ./reports/<year>/ by
+        default (--output overrides; gitignored — real financial data))
         TUI/ Terminal (raw mode, ANSI, lock-serialized output), TransactionEditor,
         SearchablePicker, TerminalSpinner
   App   App/  AppModel (@Observable lifecycle: loading → needsSetup → ready(Workspace)),

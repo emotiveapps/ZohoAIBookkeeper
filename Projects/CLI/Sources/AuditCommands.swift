@@ -22,8 +22,11 @@ struct Audit: AsyncParsableCommand {
     @Option(name: .long, help: "Receipt-check amount threshold in dollars")
     var threshold: Double = 75
 
-    @Flag(name: .long, help: "Write markdown + CSV to ~/.zoho-ai-bookkeeper/reports/<year>/")
+    @Flag(name: .long, help: "Write markdown + CSV to <output>/<year>/ (default: ./reports/<year>/)")
     var export: Bool = false
+
+    @Option(name: .long, help: "Directory to export reports into (default: ./reports)")
+    var output: String = "reports"
 
     func run() async throws {
         let config = try ConfigLoader.load()
@@ -109,8 +112,8 @@ struct Audit: AsyncParsableCommand {
     }
 
     private func exportReport(_ report: TaxReadinessReport) throws -> URL {
-        let dir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".zoho-ai-bookkeeper/reports/\(report.year)")
+        let base = URL(fileURLWithPath: output, relativeTo: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
+        let dir = base.appendingPathComponent("\(report.year)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
 
         try TaxReadinessReportFormatter.markdown(report)

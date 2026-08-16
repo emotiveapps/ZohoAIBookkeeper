@@ -44,3 +44,6 @@ config.json
 # Misc
 build/
 *.playground/
+
+# Exported tax reports (real financial data - commit deliberately if desired)
+reports/
