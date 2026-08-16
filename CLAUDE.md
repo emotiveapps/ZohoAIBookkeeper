@@ -1,100 +1,113 @@
 # CLAUDE.md — agent guide for ZohoAIBookkeeper
 
-Detailed orientation for AI agents (and humans who want the long version). The human-facing overview is `README.md`; the code-quality/bug report is `CODE_REVIEW.md`.
+Detailed orientation for AI agents (and humans who want the long version). The human-facing overview is `README.md`; `CODE_REVIEW.md` holds the Aug 2026 quality review plus the resolution log of every fix made since (useful history for why the code looks the way it does).
 
 ## What this project is
 
-A personal bookkeeping tool that categorizes uncategorized Zoho Books bank transactions with help from the Anthropic API. One shared framework (`BookkeeperCore`) feeds three front ends: a **macOS CLI (the complete, primary product)**, an iOS/iPadOS SwiftUI app (compiles, partially wired), and a watchOS app + complication (compiles, placeholder data).
+A personal bookkeeping tool that categorizes uncategorized Zoho Books bank transactions with help from the Anthropic API. One shared framework (`BookkeeperCore`) feeds three front ends: the **macOS CLI** (original product, works end to end), the **iOS/iPadOS SwiftUI app** (rewritten Aug 2026 — triage-first review flow, fully wired; see `Projects/App/DESIGN.md` for the design rationale), and a watchOS app + complication (pending count synced from the phone).
 
-**Owner's direction (Aug 2026):** the iPhone/iPad app is the priority for future work — expenses mostly get categorized on the go, so a phone app is more useful than the CLI in practice. The CLI must keep working; do not break it while building out the app.
+**Owner's direction (Aug 2026):** the iPhone/iPad app is the priority — expenses mostly get categorized on the go. The CLI must keep working; don't break it while evolving the app. Both must route Zoho writes through the shared `TransactionCategorizer` so behavior can't drift.
 
 ## Build system
 
-- **Tuist** generates the Xcode workspace from manifests. Never edit `.xcodeproj`/`.xcworkspace` by hand — they're generated and gitignored (except the workspace shell). Edit `Workspace.swift`, `Projects/*/Project.swift`, or `Tuist/ProjectDescriptionHelpers/Project+Templates.swift` instead.
-- `Tuist/Package.swift` declares dependencies: **`../../ZohoBooksClient` (a local sibling checkout — required)**, `SwiftAnthropic`, `swift-argument-parser`. If `ZohoBooksClient` is missing next to this repo, nothing builds.
-- Tuist is installed via mise (`.mise.toml`, `tuist = "latest"`). Tuist Cloud was deliberately removed to save money — don't reintroduce `fullHandle` in `Tuist.swift`.
-- `Tuist.swift` pins `compatibleXcodeVersions: .upToNextMajor("27.0")` and Swift 6.0. Bump this when Xcode majors change (it has been bumped before: 26 → 27).
+- **Tuist** generates the Xcode workspace from manifests. Never edit `.xcodeproj`/`.xcworkspace` by hand — they're generated and gitignored. Edit `Workspace.swift`, `Projects/*/Project.swift`, or `Tuist/ProjectDescriptionHelpers/Project+Templates.swift`, then **re-run `just generate`** (required after adding/removing source files — globs are resolved at generation time; a stale project fails with "Build input file cannot be found").
+- `Tuist/Package.swift` declares dependencies: **`../../ZohoBooksClient` (a local sibling checkout — required; it has its own `CODE_REVIEW.md`)**, `SwiftAnthropic`, `swift-argument-parser`. If `ZohoBooksClient` is missing next to this repo, nothing builds.
+- Tuist installs via mise (`.mise.toml`). Tuist Cloud was deliberately removed to save money — don't reintroduce `fullHandle` in `Tuist.swift`.
+- `Tuist.swift` pins `compatibleXcodeVersions: .upToNextMajor("27.0")`, Swift 6.0 (strict concurrency is in force — see conventions).
 
 ### Commands
 
-```sh
-make            # tuist install + generate + open Xcode
-make generate   # generate workspace only (does NOT open Xcode — intentional)
-make run        # build ZohoBookkeeperCLI (Debug, arm64) and run it with DYLD_FRAMEWORK_PATH set
-make clean      # kill Xcode, delete workspace/projects/DerivedData/Tuist cache
-```
-
-Direct xcodebuild equivalents:
+Task runner is `just` (recipes in `justfile`; both `just` and `tuist` are pinned in `.mise.toml` — `mise install` sets them up):
 
 ```sh
+just            # tuist install + generate + open Xcode
+just generate   # generate workspace only (does NOT open Xcode — intentional)
+just run        # build ZohoBookkeeperCLI (Debug, arm64) and run it with DYLD_FRAMEWORK_PATH set
+just test       # BookkeeperCore unit tests (macOS)
+just test-app   # app unit tests (iOS simulator)
+just clean      # kill Xcode, delete workspace/projects/DerivedData/Tuist cache
+
+# Direct builds
 xcodebuild -workspace ZohoAIBookkeeper.xcworkspace -scheme ZohoBookkeeperCLI \
   -configuration Debug -destination "platform=macOS,arch=arm64" build -quiet
-
 xcodebuild -workspace ZohoAIBookkeeper.xcworkspace -scheme ZohoBookkeeperApp \
   -configuration Debug -destination "generic/platform=iOS Simulator" build -quiet
+xcodebuild -workspace ZohoAIBookkeeper.xcworkspace -scheme ZohoBookkeeperWatch \
+  -configuration Debug -destination "generic/platform=watchOS Simulator" build -quiet
+
+# Tests (see Testing below)
+xcodebuild ... -scheme ZohoBookkeeperCLI -destination "platform=macOS,arch=arm64" test
+xcodebuild ... -scheme ZohoBookkeeperApp -destination "platform=iOS Simulator,name=iPhone 17" test
 ```
 
 ### Environment gotchas (verified Aug 2026)
 
-- **`xcode-select` may point at CommandLineTools**, which makes `tuist generate` fail with "Couldn't find Xcode's Info.plist at /Library/Contents/Info.plist". Fix without sudo by exporting `DEVELOPER_DIR=/Applications/Xcode-<version>.app/Contents/Developer` before any tuist/xcodebuild command (Xcode is installed as a versioned app bundle, e.g. `Xcode-27.0.0-Beta.5.app`). Persistent fix: `sudo xcode-select -s /Applications/Xcode-….app`.
-- Running the CLI binary outside `make run` requires `DYLD_FRAMEWORK_PATH` pointing at the Debug products dir (frameworks are dynamic, not embedded).
-- The `ZohoAIBookkeeper-All` scheme against a plain macOS destination fails on **provisioning** for the iOS/watch app targets (they need a destination + signing). Build per-scheme with the right destination instead. Signing uses team `M7T8YXH895`, bundle prefix `com.emotiveapps`.
-- **Tests exist but no scheme has a test action** — `xcodebuild test` fails with "Scheme … is not currently configured for the test action". To make tests runnable, add `testAction`s to the schemes in `Workspace.swift` (autogenerated schemes are disabled in both `Workspace.swift` and the project templates).
+- **`xcode-select` may point at CommandLineTools**, which makes `tuist generate` fail with "Couldn't find Xcode's Info.plist at /Library/Contents/Info.plist". Fix without sudo: `export DEVELOPER_DIR=/Applications/Xcode-<version>.app/Contents/Developer` before any tuist/xcodebuild command (Xcode is installed as a versioned bundle, e.g. `Xcode-27.0.0-Beta.5.app`). Persistent fix: `sudo xcode-select -s`.
+- Running the CLI binary outside `just run` requires `DYLD_FRAMEWORK_PATH` pointing at the Debug products dir (frameworks are dynamic, not embedded).
+- The `ZohoAIBookkeeper-All` scheme on a plain macOS destination fails on **provisioning** for the iOS/watch app targets. Build per-scheme with the right destination. Signing: team `M7T8YXH895`, bundle prefix `com.emotiveapps`. Test bundles use ad-hoc signing (set in `Project+Templates.swift`) so `xcodebuild test` needs no certificate.
+- Simulator tests can fail with "Simulator device failed to launch" if the sim is cold; `xcrun simctl boot "iPhone 17"` first, then run tests.
 - Linting: `.swiftlint.yml` / `.swiftformat` at repo root.
 
 ## Configuration & secrets
 
-- `Projects/BookkeeperCore/config.json` (gitignored; template at `config.example.json`) is decoded snake_case→camelCase by `ConfigLoader` into `FullConfiguration` (`Models/Configuration.swift`): `zoho` (clientId/clientSecret/accessToken/refreshToken/organizationId/region), `anthropic` (apiKey), optional `categoryMapping.categories[]` — each `{name, children[]}` for the hierarchical category picker.
-- ⚠️ The file is declared as a **framework resource** in `Projects/BookkeeperCore/Project.swift` (`resources: ["config.json"]`), so real credentials get bundled into every built product, including iOS app bundles. Fine for a personal CLI; must be replaced with Keychain/Settings-based storage before shipping the iOS app anywhere.
-- The iOS app deliberately does **not** use the bundled config — `AppState` has its own configure/connect flow with `SettingsView` input, but `loadSavedConfiguration()`/`saveConfiguration()` are TODO stubs (nothing persists between launches yet). This is the #1 gap for making the app usable.
+Two credential paths, deliberately separate:
+
+- **CLI**: `ConfigLoader` reads `$ZOHO_BOOKKEEPER_CONFIG`, else `~/.zoho-ai-bookkeeper/config.json` (snake_case JSON; template at `Projects/BookkeeperCore/config.example.json`). Fields: `zoho` (clientId/clientSecret/accessToken/refreshToken/organizationId/region), `anthropic.api_key`, optional `category_mapping.categories[]` (`{name, children[]}`) feeding the hierarchical pickers. **Never make config.json a bundled resource again** — it used to be one, which baked real secrets into every built product (fixed as M7).
+- **App**: `KeychainCredentialsStore` (BookkeeperCore) persists the whole `FullConfiguration` as one Keychain item, behind the `CredentialsStore` protocol; `InMemoryCredentialsStore` backs tests/previews. Setup accepts pasted config.json (via `ConfigLoader.parse`) or manual entry, and verifies against Zoho before saving.
 
 ## Architecture
 
 ```
-ZohoBooksClient (sibling repo: API client, OAuth refresh, ZB* models)
+ZohoBooksClient (sibling repo: actor-based API client, OAuth refresh, ZB* models)
         ▲
 BookkeeperCore (framework; @_exported imports ZohoBooksClient)
-  Models/        TransactionType (Zoho raw values, e.g. transfer = "transfer_fund"),
-                 TransactionSuggestion + CategorizedTransaction, Configuration
-  Services/      ClaudeService (actor: prompt → JSON suggestion via SwiftAnthropic)
-                 HistoryMatcher (actor: vendor-history overrides, session caches)
-                 CacheService (actor: ~/.zoho-ai-bookeeper/cache.json — processed/
-                               skipped tx IDs + known vendors; iOS uses Documents dir)
-                 TransferDetector (currently unused/dead), ConfigLoader, Logger (print-based)
-  Extensions/    AnthropicModel enum (model IDs + latest* shortcuts; default .latestSonnet)
-  ViewModels/    Dashboard/TransactionList/TransactionEditor VMs (@MainActor, for the apps)
+  Models/      TransactionType (Zoho raw values; credit-card semantics helpers)
+               TransactionSuggestion + CategorizedTransaction (editable draft)
+               Configuration (config schema, Zoho web-link builder)
+  Services/    ClaudeService (actor: prompt → JSON suggestion; parser is internal for tests)
+               HistoryMatcher (actor: vendor-history overrides; VendorHistorySource
+                               protocol seam — ZohoVendorHistorySource in prod, stub in tests)
+               SuggestionPipeline (actor: Claude + history in one call — the ONLY way
+                                   either front end should get suggestions)
+               TransactionCategorizer (the ONLY write path to Zoho; typed
+                                       CategorizationError instead of empty IDs;
+                                       refuses .refund/.skip)
+               CacheService (actor: processed/skipped/vendors; macOS ~/.zoho-ai-bookkeeper,
+                             iOS documents dir)
+               CredentialsStore / KeychainCredentialsStore / InMemoryCredentialsStore
+               ConfigLoader (CLI file config), Logger (stderr)
+  Extensions/  AnthropicModel (model IDs + latest* shortcuts; default .latestSonnet)
         ▲
-  CLI  (ZohoBookkeeperCLI.swift: `clean` + `list-accounts` subcommands;
-        TUI/: Terminal (raw mode, ANSI), TransactionEditor, SearchablePicker, TerminalSpinner)
-  App  (SwiftUI: ContentView→Settings-or-Tabs; Dashboard/Accounts/Settings tabs)
-  Watch (pending-count UI + WidgetKit complication; placeholder data only)
+  CLI   ZohoBookkeeperCLI.swift (`clean` + `list-accounts`; review loop with
+        do/catch-guarded cache saves)
+        TUI/ Terminal (raw mode, ANSI, lock-serialized output), TransactionEditor,
+        SearchablePicker, TerminalSpinner
+  App   App/  AppModel (@Observable lifecycle: loading → needsSetup → ready(Workspace)),
+              Workspace (connected clients + reference data + pending counts),
+              ReviewSession (per-account queue, one-ahead suggestion prefetch),
+              WatchSync (WCSession sender)
+        Views/ RootView, SetupView (paste-import or manual), HomeView
+              (NavigationSplitView: accounts + stats), ReviewView (triage screen),
+              PickerSheets (searchable category/vendor), SettingsView, Components
+  Watch ZohoBookkeeperWatchApp (WatchState + PhoneSyncReceiver: WCSession receiver,
+        persists count for the complication), ContentView, PendingCountComplication
 ```
 
-Key flows:
+Key invariants:
 
-- **CLI `clean`** (`Projects/CLI/Sources/ZohoBookkeeperCLI.swift`): load config → build Zoho client → get categories (config or Zoho expense accounts) → pick bank account → fetch vendors + uncategorized transactions → filter out cached processed/skipped → per transaction: ClaudeService suggestion → HistoryMatcher refinement → `TransactionEditor.run()` → on save, `categorizeTransaction()` posts expense/transfer/owner-contribution/sale to Zoho and marks processed.
-- **Credit-card semantics**: `TransactionType.isUserExpense(isDebit:accountType:)` — on `credit_card` accounts, credits are purchases. Any new UI must route direction logic through these helpers, not raw `isDebit`.
-- **`categorizeTransaction` is duplicated** in the CLI and in `TransactionEditorViewModel` (same switch, same hardcoded "Owner's Equity"/"Sales" account lookups). If you touch one, touch both — or better, extract it into BookkeeperCore.
-
-## Known bugs / sharp edges
-
-Full list with severities in `CODE_REVIEW.md`. Highest-impact ones to keep in mind while editing:
-
-1. `ClaudeService.parseClaudeResponse` slices JSON with `jsonStart.lowerBound...jsonEnd.upperBound` — a closed range through `upperBound` **crashes when the response ends exactly with `}`** and otherwise grabs one extra character. Should be `..<`.
-2. iOS `TransactionEditorView` never passes `claudeService`/`zohoClient`/`bankAccountId` into its view model, so "Get AI Suggestion" can't work (see the dead `onAppear` block and its compiler warning).
-3. `searchAccountByName` misses fall back to `accountId: ""` sent to Zoho instead of an error (CLI + VM).
-4. Saving a transaction whose type is `.refund`/`.skip` marks it processed locally without doing anything in Zoho.
-5. Cache directory name has a typo: `.zoho-ai-bookeeper` (missing “k”). Renaming it orphans existing caches — migrate if you fix it.
-6. `AnthropicModel.claude46Opus = "claude-opus-4-6-20260219"` is not a real model ID (Opus 4.6 has no dated ID; the correct string is `claude-opus-4-6`). Unused at runtime today, but would 404 if selected. Default model is `.latestSonnet` → `claude-sonnet-4-5-20250929` (valid, but no longer the latest Sonnet).
+- **Credit-card semantics**: on `credit_card` accounts, credits are purchases. All direction logic must go through `TransactionType.isUserExpense(isDebit:accountType:)` / `availableTypes` — never raw `isDebit`.
+- **Single write path**: every Zoho categorization goes through `TransactionCategorizer.categorize`. It throws `CategorizationError` (`accountNotFound` / `transferTargetMissing` / `typeNotCategorizable`) rather than sending empty account IDs. Callers handle `.skip` (mark skipped) and `.refund` (surface error) locally — never mark them processed.
+- **Single suggestion path**: `SuggestionPipeline.suggestion(for:...)`. Don't call `ClaudeService`/`HistoryMatcher` directly from front ends.
+- **App state**: `@MainActor @Observable` classes (Observation framework, iOS 17+), not ObservableObject. The old `ViewModels/` layer is gone — don't recreate it; screen logic lives in `ReviewSession`/`Workspace`.
 
 ## Conventions
 
-- Swift 6.0 language mode; services are `actor`s; view models are `@MainActor final class ... : ObservableObject` with `@Published` state.
-- Use `logger` (BookkeeperCore's global) instead of `print` for diagnostics — but note it prints to stdout, which corrupts the TUI while raw mode is active; keep it out of hot TUI paths.
-- Zoho types from ZohoBooksClient are prefixed `ZB` (`ZBBankTransaction`, `ZBCategorizeExpenseRequest`, …). BookkeeperCore re-exports the module.
-- Commit style is short imperative summaries (see `git log`); the owner commits, no PR flow.
-- Anthropic model IDs live only in `Extensions/AnthropicModel.swift`; update the `latest*` static shortcuts when adding models (per the note in that file).
+- Swift 6 language mode. Services are `actor`s; app models are `@MainActor @Observable`. `ClaudeService.service` keeps a justified `nonisolated(unsafe)` (SwiftAnthropic isn't Sendable) — don't "clean it up" without checking the region-isolation error it suppresses.
+- `logger` writes to **stderr** (the TUI owns stdout). Keep logging out of hot TUI paths anyway.
+- Zoho types are prefixed `ZB`; BookkeeperCore re-exports the module.
+- Anthropic model IDs live only in `Extensions/AnthropicModel.swift`; 4.6+ models have **no dated IDs** (bare name is the ID). Keep `latest*` shortcuts current when adding models. Default stays Sonnet-tier per owner's cost preference.
+- Commit style: short imperative summaries; the owner commits directly to main, no PR flow.
 
 ## Testing
 
-`BookkeeperCoreTests` (3 trivial TransactionType tests, Swift Testing) and `ZohoBookkeeperAppTests` (1 AppState test). Not runnable via any current scheme (no test action — see gotchas). If you add meaningful logic to BookkeeperCore, also wire up a testable scheme; parsing (`parseClaudeResponse`) and `HistoryMatcher` are the highest-value units to cover since they're pure-ish logic behind network seams.
+34 Swift Testing tests: `BookkeeperCoreTests` (30, run via the **CLI scheme**, macOS destination) and `ZohoBookkeeperAppTests` (4, run via the **App scheme**, iOS Simulator). Coverage philosophy: the pure decision logic is what's tested — Claude response parsing, history matching (via the `VendorHistorySource` stub), cache persistence/corruption recovery, categorizer guards, credit-card semantics, config parsing, credential lifecycle. UI and network glue are deliberately not chased for coverage. If you add logic to BookkeeperCore, add tests in `Projects/BookkeeperCore/Tests/` — the seams (protocol sources, internal parser) exist precisely so that's easy; prefer extending a seam over hitting the network.

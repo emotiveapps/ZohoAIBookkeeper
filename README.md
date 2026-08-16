@@ -1,8 +1,8 @@
 # ZohoAIBookkeeper
 
-An AI-powered bookkeeping assistant that helps categorize uncategorized bank transactions in [Zoho Books](https://www.zoho.com/books/). It fetches your uncategorized transactions, asks Claude to suggest a transaction type / vendor / category / description for each one, refines that suggestion using your historical expense data, and then lets you review and confirm each transaction in an interactive terminal UI before it's written back to Zoho.
+An AI-powered bookkeeping assistant that helps categorize uncategorized bank transactions in [Zoho Books](https://www.zoho.com/books/). It fetches your uncategorized transactions, asks Claude to suggest a transaction type / vendor / category / description for each one, refines that suggestion using your historical expense data, and then lets you review and confirm each transaction before it's written back to Zoho.
 
-The **macOS CLI is the finished, daily-driver product.** iOS/iPadOS and watchOS app targets exist and compile, but they are partial scaffolding (see [Project status](#project-status)).
+Two front ends share one engine (`BookkeeperCore`): the **macOS CLI** (interactive terminal UI) and the **iPhone/iPad app** (triage-style review flow, credentials in the Keychain). A watchOS app + complication shows the pending count synced from the phone.
 
 ## How it works
 
@@ -12,7 +12,9 @@ For each uncategorized bank transaction, the `clean` command:
 2. Claude suggests a type (expense / transfer / owner contribution / sale / skip), a cleaned-up vendor name, a category, and a description, with a confidence score.
 3. The suggestion is refined against history: if that vendor's prior expenses in Zoho mostly used one category, that category overrides Claude's guess (confidence bumped to 98%).
 4. You review the suggestion in a full-screen terminal editor — cycle the type, pick vendor/category from searchable pickers, edit the description, or open the transaction in the Zoho web UI.
-5. On save, the transaction is categorized in Zoho Books (creating the vendor if needed). Processed and skipped transaction IDs are cached in `~/.zoho-ai-bookeeper/cache.json` so they aren't shown again.
+5. On save, the transaction is categorized in Zoho Books (creating the vendor if needed). Processed and skipped transaction IDs are cached (macOS: `~/.zoho-ai-bookkeeper/cache.json`; iOS: app documents) so they aren't shown again.
+
+The iPhone/iPad app runs the same loop as a one-transaction-at-a-time review screen with the next suggestion prefetched while you decide, so advancing feels instant.
 
 ## Requirements
 
@@ -31,24 +33,27 @@ For each uncategorized bank transaction, the `clean` command:
 
 ## Setup
 
-1. Copy the example config and fill in your credentials:
+1. **CLI**: copy the example config into your home directory and fill in your credentials:
 
    ```sh
-   cp Projects/BookkeeperCore/config.example.json Projects/BookkeeperCore/config.json
+   mkdir -p ~/.zoho-ai-bookkeeper
+   cp Projects/BookkeeperCore/config.example.json ~/.zoho-ai-bookkeeper/config.json
    ```
 
-   `config.json` is gitignored. It contains your Zoho OAuth credentials, Anthropic API key, and an optional hierarchical category list (`categoryMapping`) used by the category picker. If `categoryMapping` is omitted, expense categories are fetched from your Zoho chart of accounts.
+   It contains your Zoho OAuth credentials, Anthropic API key, and an optional hierarchical category list (`category_mapping`) used by the category picker; omit it and expense categories are fetched from your Zoho chart of accounts. Set `ZOHO_BOOKKEEPER_CONFIG` to point somewhere else. (The config is deliberately *not* bundled into built products — it holds real secrets.)
 
-2. Generate the Xcode workspace and open it:
+2. **iPhone/iPad app**: no file needed — on first launch, paste the contents of your `config.json` into Setup (or type the credentials) and they're stored in the device Keychain.
+
+3. Generate the Xcode workspace and open it:
 
    ```sh
-   make            # tuist install + generate, then open workspace
+   just            # tuist install + generate, then open workspace
    ```
 
 ## Usage
 
 ```sh
-make run        # build and launch the interactive CLI (clean command)
+just run        # build and launch the interactive CLI (clean command)
 ```
 
 Or run the built binary directly:
@@ -60,22 +65,29 @@ zoho-bookkeeper list-accounts
 
 Editor keys: `Tab`/`↑↓` navigate · `Enter` select/edit · type to filter in pickers · `Esc` cancel · `Ctrl+Q` quit.
 
-Other make targets: `make generate` (regenerate workspace without opening), `make open`, `make clean` (nuke workspace, DerivedData, Tuist cache).
+Other recipes (`just --list` for all): `just generate` (regenerate workspace without opening), `just open`, `just test` / `just test-app` (unit tests), `just clean` (nuke workspace, DerivedData, Tuist cache). Both `just` and `tuist` are installed by [mise](https://mise.jdx.dev) via `.mise.toml` — run `mise install` once.
 
 ## Project layout
 
 | Path | What it is |
 |---|---|
-| `Projects/BookkeeperCore` | Shared framework (iOS/macOS/watchOS): models, Claude service, history matcher, cache, view models |
+| `Projects/BookkeeperCore` | Shared framework (iOS/macOS/watchOS): models, Claude suggestion pipeline, history matcher, categorizer, cache, Keychain store |
 | `Projects/CLI` | `ZohoBookkeeperCLI` — the macOS terminal app (ArgumentParser + custom raw-mode TUI) |
-| `Projects/App` | `ZohoBookkeeperApp` — SwiftUI iPhone/iPad app (scaffolding) |
-| `Projects/Watch` | `ZohoBookkeeperWatch` — watchOS app + pending-count complication (scaffolding) |
+| `Projects/App` | `ZohoBookkeeperApp` — SwiftUI iPhone/iPad app (design notes in `Projects/App/DESIGN.md`) |
+| `Projects/Watch` | `ZohoBookkeeperWatch` — watchOS app + pending-count complication (synced from the phone) |
 | `Tuist/`, `Workspace.swift` | Tuist manifests; dependencies: ZohoBooksClient (local), SwiftAnthropic, swift-argument-parser |
+
+## Testing
+
+```sh
+just test       # BookkeeperCore unit tests (macOS, 30 tests)
+just test-app   # app unit tests (iOS simulator)
+```
 
 ## Project status
 
-- **CLI** — works end to end; this is what gets used.
-- **iOS app** — compiles for the simulator and has real views (dashboard, account list, transaction list/editor, settings), but credentials are not persisted between launches (Keychain storage is a TODO) and the AI-suggestion button isn't wired to the Claude service yet. Building out a usable iPhone/iPad app is the main future direction, since categorizing expenses on the go is more practical than at a desk. The CLI stays.
-- **Watch app** — compiles; UI shell and complication exist but show placeholder data (no Watch Connectivity or shared data source yet).
+- **CLI** — works end to end; the original daily driver.
+- **iOS/iPad app** — rewritten (Aug 2026) around a triage-first review flow: Keychain-persisted credentials, live AI suggestions with prefetch, searchable hierarchical category picker, vendor creation, adaptive iPhone/iPad layout. Builds and unit-tests clean; needs a run on a real device against live data to shake out UX.
+- **Watch app** — shows the real pending count synced from the iPhone via Watch Connectivity; the complication reads the same stored value.
 
-See `CODE_REVIEW.md` for a detailed code-quality assessment and known bugs, and `CLAUDE.md` for contributor/agent-oriented documentation.
+See `CODE_REVIEW.md` for the code-quality review and the resolution log of everything fixed since, and `CLAUDE.md` for contributor/agent-oriented documentation.
