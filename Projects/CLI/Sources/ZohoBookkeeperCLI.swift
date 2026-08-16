@@ -212,16 +212,24 @@ struct Clean: AsyncParsableCommand {
 
             switch result {
             case .save(let editedTx):
-                if !dryRun {
+                // A draft saved as "Skip" is just a skip; "Refund" can't be written
+                // to Zoho, so surface that instead of silently marking it processed.
+                if editedTx.selectedType == .skip {
+                    skippedCount += 1
+                    await cacheService.markSkipped(transaction.transactionId)
+                } else if dryRun {
+                    // Dry run: report, but leave the cache untouched so a real run
+                    // still sees this transaction.
+                    processedCount += 1
+                } else {
                     let spinner = TerminalSpinner(terminal: terminal, message: "Saving...")
                     spinner.start()
                     do {
-                        try await categorizeTransaction(
-                            client: client,
-                            transaction: editedTx,
-                            cacheService: cacheService,
-                            verbose: options.verbose
-                        )
+                        let categorizer = TransactionCategorizer(client: client)
+                        let vendorUsed = try await categorizer.categorize(editedTx)
+                        if let vendorUsed {
+                            await cacheService.addVendor(vendorUsed)
+                        }
                         spinner.stop(message: "Saved!")
                         processedCount += 1
                         await cacheService.markProcessed(transaction.transactionId)
@@ -231,9 +239,6 @@ struct Clean: AsyncParsableCommand {
                         _ = terminal.readKey()
                         skippedCount += 1
                     }
-                } else {
-                    processedCount += 1
-                    await cacheService.markProcessed(transaction.transactionId)
                 }
 
             case .skip:
@@ -282,90 +287,4 @@ func fetchExpenseCategories(client: ZohoBooksClient<ZohoOAuth>) async throws -> 
         .sorted()
 }
 
-func categorizeTransaction(
-    client: ZohoBooksClient<ZohoOAuth>,
-    transaction: CategorizedTransaction,
-    cacheService: CacheService,
-    verbose: Bool
-) async throws {
-    let tx = transaction.transaction
-
-    switch transaction.selectedType {
-    case .expense:
-        // Get or create vendor if specified
-        var vendorId: String?
-        if !transaction.vendorName.isEmpty {
-            let vendor = try await client.getOrCreateVendor(name: transaction.vendorName)
-            vendorId = vendor.contactId
-            await cacheService.addVendor(transaction.vendorName)
-        }
-
-        // Find category account
-        let categoryAccount = try await client.searchAccountByName(transaction.category)
-
-        let request = ZBCategorizeExpenseRequest(
-            accountId: categoryAccount?.accountId ?? "",
-            vendorId: vendorId,
-            paidThroughAccountId: tx.accountId,
-            description: transaction.description,
-            date: tx.date,
-            amount: tx.amount
-        )
-
-        if verbose {
-            print("Categorizing as expense: \(transaction.category), vendor: \(transaction.vendorName)")
-        }
-
-        try await client.categorizeAsExpense(transactionId: tx.transactionId, request: request)
-
-    case .transfer:
-        let request = ZBCategorizeTransferRequest(
-            toAccountId: transaction.transferToAccountId,
-            amount: tx.amount,
-            description: transaction.description
-        )
-
-        if verbose {
-            print("Categorizing as transfer")
-        }
-
-        try await client.categorizeAsTransfer(transactionId: tx.transactionId, request: request)
-
-    case .ownerContribution:
-        // Find owner's equity account
-        let equityAccount = try await client.searchAccountByName("Owner's Equity")
-
-        let request = ZBCategorizeOwnerContributionRequest(
-            accountId: equityAccount?.accountId ?? "",
-            description: transaction.description
-        )
-
-        if verbose {
-            print("Categorizing as owner contribution")
-        }
-
-        try await client.categorizeAsOwnerContribution(transactionId: tx.transactionId, request: request)
-
-    case .sale:
-        // Find sales/income account
-        let salesAccount = try await client.searchAccountByName("Sales")
-
-        let request = ZBCategorizeSaleRequest(
-            accountId: salesAccount?.accountId ?? "",
-            description: transaction.description
-        )
-
-        if verbose {
-            print("Categorizing as sale")
-        }
-
-        try await client.categorizeAsSale(transactionId: tx.transactionId, request: request)
-
-    case .refund, .skip:
-        // Skip - don't categorize
-        if verbose {
-            print("Skipping transaction")
-        }
-    }
-}
 
