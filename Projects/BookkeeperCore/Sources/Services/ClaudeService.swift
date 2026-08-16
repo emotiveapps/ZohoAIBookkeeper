@@ -4,6 +4,10 @@ import ZohoBooksClient
 
 /// Service for getting transaction categorization suggestions from Claude
 public actor ClaudeService {
+    // nonisolated(unsafe) is required, not incidental: SwiftAnthropic's
+    // AnthropicService isn't Sendable, so region isolation rejects awaiting its
+    // async methods from actor-isolated state. Safe here because the service is
+    // created in init and only ever used from this actor.
     private nonisolated(unsafe) let service: any AnthropicService
     private let model: AnthropicModel
     private let categories: [String]
