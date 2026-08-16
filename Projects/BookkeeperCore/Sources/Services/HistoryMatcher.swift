@@ -70,14 +70,16 @@ public actor HistoryMatcher {
         }
 
         // Show category breakdown
-        let categoryCounts = countOccurrences(expenses.compactMap { $0.accountName })
+        let categorized = expenses.compactMap { $0.accountName }
+        let categoryCounts = countOccurrences(categorized)
         for (category, count) in categoryCounts {
             debugLines.append("  \(category): \(count)x")
         }
 
-        // Override category if a majority share the same one
+        // Override category if a majority of the *categorized* expenses share one
+        // (expenses with no account name shouldn't dilute the vote).
         var overrideCategory = suggestion.category
-        if let (topCategory, count) = categoryCounts.first, count > expenses.count / 2 {
+        if let (topCategory, count) = categoryCounts.first, count > categorized.count / 2 {
             overrideCategory = topCategory
         }
 
@@ -88,8 +90,9 @@ public actor HistoryMatcher {
             return abs(expenseAmount - transaction.amount) < 0.01
         }
         if !amountMatched.isEmpty {
-            let descCounts = countOccurrences(amountMatched.compactMap { $0.description })
-            if let (topDesc, count) = descCounts.first, count > amountMatched.count / 2 {
+            let described = amountMatched.compactMap { $0.description }
+            let descCounts = countOccurrences(described)
+            if let (topDesc, count) = descCounts.first, count > described.count / 2 {
                 overrideDescription = topDesc
             }
         }
@@ -112,11 +115,13 @@ public actor HistoryMatcher {
     }
 
     /// Count occurrences of each value, sorted descending by count.
+    /// Ties break alphabetically so results are stable across runs
+    /// (dictionary ordering is otherwise nondeterministic).
     private func countOccurrences(_ values: [String]) -> [(String, Int)] {
         var counts: [String: Int] = [:]
         for value in values {
             counts[value, default: 0] += 1
         }
-        return counts.sorted { $0.value > $1.value }
+        return counts.sorted { ($0.value, $1.key) > ($1.value, $0.key) }
     }
 }
