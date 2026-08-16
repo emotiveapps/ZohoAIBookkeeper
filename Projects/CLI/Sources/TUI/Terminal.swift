@@ -4,6 +4,11 @@ import Foundation
 public final class Terminal {
     private var originalTermios: termios?
 
+    /// Serializes escape-sequence output: TerminalSpinner animates from a
+    /// background queue while the main thread may draw. Recursive because
+    /// drawing helpers call moveTo/printAt internally.
+    private let outputLock = NSRecursiveLock()
+
     // ANSI escape codes
     public static let esc = "\u{001B}["
     public static let clearScreen = "\(esc)2J"
@@ -78,12 +83,16 @@ public final class Terminal {
 
     /// Clear the screen
     public func clearScreen() {
+        outputLock.lock()
+        defer { outputLock.unlock() }
         print("\(Terminal.clearScreen)\(Terminal.cursorHome)", terminator: "")
         fflush(stdout)
     }
 
     /// Move cursor to position
     public func moveTo(row: Int, col: Int) {
+        outputLock.lock()
+        defer { outputLock.unlock() }
         print("\(Terminal.esc)\(row);\(col)H", terminator: "")
         fflush(stdout)
     }
@@ -141,6 +150,8 @@ public final class Terminal {
 
     /// Draw a box with optional title
     public func drawBox(row: Int, col: Int, width: Int, height: Int, title: String? = nil) {
+        outputLock.lock()
+        defer { outputLock.unlock() }
         moveTo(row: row, col: col)
         print(Terminal.cyan, terminator: "")
 
@@ -179,6 +190,8 @@ public final class Terminal {
 
     /// Draw a horizontal separator line
     public func drawSeparator(row: Int, col: Int, width: Int) {
+        outputLock.lock()
+        defer { outputLock.unlock() }
         moveTo(row: row, col: col)
         print("\(Terminal.cyan)\(Terminal.boxTeeRight)", terminator: "")
         print(String(repeating: Terminal.boxHorizontal, count: width - 2), terminator: "")
@@ -188,6 +201,8 @@ public final class Terminal {
 
     /// Print colored text at position
     public func printAt(row: Int, col: Int, text: String, color: String = "") {
+        outputLock.lock()
+        defer { outputLock.unlock() }
         moveTo(row: row, col: col)
         print("\(color)\(text)\(Terminal.reset)", terminator: "")
         fflush(stdout)
@@ -195,6 +210,8 @@ public final class Terminal {
 
     /// Print a field with label and value
     public func printField(row: Int, col: Int, label: String, value: String, selected: Bool = false, width: Int = 40) {
+        outputLock.lock()
+        defer { outputLock.unlock() }
         moveTo(row: row, col: col)
         print("\(Terminal.dim)\(label):\(Terminal.reset) ", terminator: "")
 
@@ -211,6 +228,8 @@ public final class Terminal {
 
     /// Print a button
     public func printButton(row: Int, col: Int, label: String, selected: Bool = false, color: String = Terminal.white) {
+        outputLock.lock()
+        defer { outputLock.unlock() }
         moveTo(row: row, col: col)
         if selected {
             print("\(Terminal.bgBlue)\(Terminal.bold)\(Terminal.esc)97m \(label) \(Terminal.reset)", terminator: "")
