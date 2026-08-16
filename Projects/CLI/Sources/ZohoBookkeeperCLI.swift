@@ -151,17 +151,16 @@ struct Clean: AsyncParsableCommand {
         let terminal = Terminal()
         terminal.enableRawMode()
 
-        defer {
-            terminal.disableRawMode()
-            Task {
-                try? await cacheService.save()
-            }
-        }
+        // defer can't await, so it only restores the terminal (idempotent); the
+        // cache is saved explicitly on every exit path, including thrown errors.
+        defer { terminal.disableRawMode() }
 
         var processedCount = 0
         var skippedCount = 0
+        var quitEarly = false
 
-        for (index, transaction) in unprocessedTransactions.enumerated() {
+        do {
+        reviewLoop: for (index, transaction) in unprocessedTransactions.enumerated() {
             // Show progress while fetching AI suggestion
             let aiSpinner = TerminalSpinner(
                 terminal: terminal,
@@ -246,17 +245,19 @@ struct Clean: AsyncParsableCommand {
                 await cacheService.markSkipped(transaction.transactionId)
 
             case .quit:
-                terminal.disableRawMode()
-                print("\n\nQuitting...")
-                print("Processed: \(processedCount), Skipped: \(skippedCount)")
-                try await cacheService.save()
-                return
+                quitEarly = true
+                break reviewLoop
             }
 
         }
+        } catch {
+            terminal.disableRawMode()
+            try? await cacheService.save()
+            throw error
+        }
 
         terminal.disableRawMode()
-        print("\n\nComplete!")
+        print(quitEarly ? "\n\nQuitting..." : "\n\nComplete!")
         print("Processed: \(processedCount), Skipped: \(skippedCount)")
         try await cacheService.save()
     }
