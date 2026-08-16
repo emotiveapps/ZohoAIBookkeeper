@@ -61,7 +61,12 @@ Or run the built binary directly:
 ```
 zoho-bookkeeper clean [--account <id>] [--year <yyyy>] [--dry-run] [--verbose]
 zoho-bookkeeper list-accounts
+zoho-bookkeeper audit --year 2025 [--receipts] [--export]   # tax-readiness report; exits 2 on blockers
+zoho-bookkeeper gaps --year 2025 [--account <id>]           # bank-feed outage detection w/ sparklines
+zoho-bookkeeper cogs --year 2025 --ending-inventory 5000    # periodic COGS for inventory resale
 ```
+
+`audit --export` writes markdown + CSVs to `~/.zoho-ai-bookkeeper/reports/<year>/` for your accountant. Inventory purchases (e.g. LEGO bought for resale) are categorized to Inventory/COGS accounts at purchase time and deducted via COGS at year-end — the pickers and AI suggestions understand this.
 
 Editor keys: `Tab`/`↑↓` navigate · `Enter` select/edit · type to filter in pickers · `Esc` cancel · `Ctrl+Q` quit.
 

@@ -9,6 +9,7 @@ struct HomeView: View {
 
     @State private var selectedAccountId: String?
     @State private var showingSettings = false
+    @State private var showingReadiness = false
 
     var body: some View {
         NavigationSplitView {
@@ -18,6 +19,9 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(workspace: workspace)
+        }
+        .sheet(isPresented: $showingReadiness) {
+            ReadinessView(workspace: workspace)
         }
     }
 
@@ -39,6 +43,30 @@ struct HomeView: View {
                     )
                     .tag(account.accountId)
                 }
+            }
+
+            Section {
+                Button {
+                    showingReadiness = true
+                } label: {
+                    HStack {
+                        Label("Tax readiness", systemImage: "checkmark.seal")
+                        Spacer()
+                        if workspace.totalPendingCount > 0 {
+                            Text("\(workspace.totalPendingCount) to review")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .foregroundStyle(.primary)
+            } header: {
+                Text("Filing")
+            } footer: {
+                Text("Completeness audit: uncategorized items, bank-feed gaps, expense totals per year.")
             }
 
             Section("This device") {
