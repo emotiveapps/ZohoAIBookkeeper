@@ -361,30 +361,41 @@ public final class TransactionEditor {
             // Type uses cycling, not text editing
             cycleFieldValue(forward: true)
         case .category:
-            // Show hierarchical picker below the editor
+            // Show searchable hierarchical picker below the editor
+            let pickerStartRow = startRow + boxHeight + 1
             if !categoryConfigs.isEmpty {
-                let pickerStartRow = startRow + boxHeight + 1
-                let picker = CategoryPicker(
+                let picker = SearchablePicker.forCategories(
                     terminal: terminal,
                     categoryConfigs: categoryConfigs,
-                    currentCategory: transaction.category,
+                    currentValue: transaction.category,
                     startRow: pickerStartRow,
                     startCol: startCol
                 )
                 if let selected = picker.run() {
                     transaction.category = selected
                 }
-            } else {
-                cycleFieldValue(forward: true)
+            } else if !categories.isEmpty {
+                let picker = SearchablePicker.forFlatList(
+                    terminal: terminal,
+                    title: "Select Category",
+                    items: categories,
+                    currentValue: transaction.category,
+                    startRow: pickerStartRow,
+                    startCol: startCol
+                )
+                if let selected = picker.run() {
+                    transaction.category = selected
+                }
             }
         case .vendor:
             // Show searchable vendor picker below the editor
             if !vendors.isEmpty {
                 let pickerStartRow = startRow + boxHeight + 1
-                let picker = VendorPicker(
+                let picker = SearchablePicker.forFlatList(
                     terminal: terminal,
-                    vendors: vendors,
-                    currentVendor: transaction.vendorName,
+                    title: "Select Vendor",
+                    items: vendors,
+                    currentValue: transaction.vendorName,
                     startRow: pickerStartRow,
                     startCol: startCol
                 )
