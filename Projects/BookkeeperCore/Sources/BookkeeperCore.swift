@@ -1,9 +1,9 @@
 // BookkeeperCore - Shared business logic for ZohoAIBookkeeper
 //
 // This module provides shared functionality across all platforms:
-// - iOS app
-// - macOS CLI
-// - watchOS complication
+// - macOS CLI (the primary product)
+// - iOS/iPadOS app
+// - watchOS app + complication
 //
 
 @_exported import ZohoBooksClient
@@ -19,16 +19,16 @@ public typealias Contact = ZBContact
 // All public types are defined in their respective files:
 //
 // Models/
-//   - TransactionType.swift
-//   - TransactionSuggestion.swift
-//   - Configuration.swift
+//   - TransactionType.swift        Zoho transaction types + credit-card semantics
+//   - TransactionSuggestion.swift  AI suggestion + editable draft
+//   - Configuration.swift          config.json schema + Zoho web links
 //
 // Services/
-//   - ClaudeService.swift
-//   - CacheService.swift
-//   - TransferDetector.swift
-//
-// ViewModels/
-//   - TransactionListViewModel.swift
-//   - TransactionEditorViewModel.swift
-//   - DashboardViewModel.swift
+//   - ClaudeService.swift          prompt -> JSON suggestion via SwiftAnthropic
+//   - HistoryMatcher.swift         vendor-history refinement of suggestions
+//   - SuggestionPipeline.swift     ClaudeService + HistoryMatcher in one call
+//   - TransactionCategorizer.swift the single "write decision to Zoho" path
+//   - CacheService.swift           processed/skipped/vendor cache on disk
+//   - CredentialsStore.swift       Keychain-backed credential storage (apps)
+//   - ConfigLoader.swift           file-based config loading (CLI)
+//   - Logger.swift                 stderr diagnostics
