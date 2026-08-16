@@ -7,9 +7,9 @@ public enum AnthropicModel: String, CaseIterable, Sendable {
 
   // MARK: - Shortcuts to latest models
 
-  public static var latestSonnet: Self { .claude45Sonnet }
+  public static var latestSonnet: Self { .claude5Sonnet }
   public static var latestHaiku: Self { .claude45Haiku }
-  public static var latestOpus: Self { .claude46Opus }
+  public static var latestOpus: Self { .claude5Opus }
 
   // MARK: - Legacy Models
 
@@ -37,11 +37,19 @@ public enum AnthropicModel: String, CaseIterable, Sendable {
   case claude4Opus = "claude-opus-4-20250514"
   case claude4Sonnet = "claude-sonnet-4-20250514"
 
-  // MARK: - Claude 4.5 / 4.6
+  // MARK: - Claude 4.5+
 
   case claude45Sonnet = "claude-sonnet-4-5-20250929"
   case claude45Haiku = "claude-haiku-4-5-20251001"
-  case claude46Opus = "claude-opus-4-6-20260219"
+  // 4.6 and later have no date-suffixed IDs — the bare name is the model ID.
+  case claude46Sonnet = "claude-sonnet-4-6"
+  case claude46Opus = "claude-opus-4-6"
+  case claude48Opus = "claude-opus-4-8"
+
+  // MARK: - Claude 5
+
+  case claude5Sonnet = "claude-sonnet-5"
+  case claude5Opus = "claude-opus-5"
 
   /// Convert to SwiftAnthropic's `Model` type.
   public var asModel: Model {
