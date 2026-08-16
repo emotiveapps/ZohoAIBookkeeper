@@ -11,7 +11,14 @@ public actor CacheService {
         } else {
             #if os(macOS)
             let homeDir = FileManager.default.homeDirectoryForCurrentUser
-            self.cacheDirectory = homeDir.appendingPathComponent(".zoho-ai-bookeeper")
+            let preferred = homeDir.appendingPathComponent(".zoho-ai-bookkeeper")
+            // The directory name used to be misspelled; migrate old caches once.
+            let legacy = homeDir.appendingPathComponent(".zoho-ai-bookeeper")
+            let fm = FileManager.default
+            if !fm.fileExists(atPath: preferred.path), fm.fileExists(atPath: legacy.path) {
+                try? fm.moveItem(at: legacy, to: preferred)
+            }
+            self.cacheDirectory = preferred
             #else
             // iOS/watchOS: Use app's documents directory
             let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
