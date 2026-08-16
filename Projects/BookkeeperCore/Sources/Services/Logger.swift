@@ -23,7 +23,10 @@ public final class Logger: Sendable {
 
     private func log(level: LogLevel, message: String, file: String, function: String, line: Int) {
         let fileName = (file as NSString).lastPathComponent
-        print("\(level.emoji) [\(level.rawValue)] \(fileName):\(line) \(function) - \(message)")
+        let line = "\(level.emoji) [\(level.rawValue)] \(fileName):\(line) \(function) - \(message)\n"
+        // stderr, not stdout: the CLI's TUI owns stdout while raw mode is active,
+        // and stderr can be redirected (2>/dev/null) without losing the UI.
+        FileHandle.standardError.write(Data(line.utf8))
     }
 }
 
