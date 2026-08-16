@@ -17,8 +17,7 @@ public actor SuggestionPipeline {
         client: ZohoBooksClient<ZohoOAuth>,
         bankAccounts: [ZBBankAccount],
         existingVendors: [String],
-        accountType: String,
-        bankAccountId: String
+        accountType: String
     ) async throws -> HistoryMatchResult {
         let suggestion = try await claudeService.suggestCategorization(
             transaction: transaction,
@@ -29,8 +28,7 @@ public actor SuggestionPipeline {
         return try await historyMatcher.refine(
             suggestion: suggestion,
             transaction: transaction,
-            client: client,
-            bankAccountId: bankAccountId
+            source: ZohoVendorHistorySource(client: client)
         )
     }
 }

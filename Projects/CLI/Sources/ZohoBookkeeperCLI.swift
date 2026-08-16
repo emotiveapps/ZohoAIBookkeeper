@@ -83,7 +83,7 @@ struct Clean: AsyncParsableCommand {
         )
 
         let cacheService = try CacheService()
-        let historyMatcher = HistoryMatcher()
+        let pipeline = SuggestionPipeline(claudeService: claudeService)
 
         // Get bank accounts
         print("Fetching bank accounts...")
@@ -161,30 +161,21 @@ struct Clean: AsyncParsableCommand {
 
         do {
         reviewLoop: for (index, transaction) in unprocessedTransactions.enumerated() {
-            // Show progress while fetching AI suggestion
+            // Show progress while fetching the AI suggestion + history refinement
             let aiSpinner = TerminalSpinner(
                 terminal: terminal,
-                message: "[\(index + 1)/\(unprocessedTransactions.count)] Getting AI suggestion for \(transaction.displayDescription.prefix(30))..."
+                message: "[\(index + 1)/\(unprocessedTransactions.count)] Getting suggestion for \(transaction.displayDescription.prefix(30))..."
             )
             aiSpinner.start()
 
-            let suggestion = try await claudeService.suggestCategorization(
-                transaction: transaction,
+            let historyResult = try await pipeline.suggestion(
+                for: transaction,
+                client: client,
                 bankAccounts: bankAccounts,
                 existingVendors: vendorNames,
                 accountType: accountType
             )
-            aiSpinner.stop(message: "[\(index + 1)/\(unprocessedTransactions.count)] Checking history...")
-
-            let historySpinner = TerminalSpinner(terminal: terminal, message: "[\(index + 1)/\(unprocessedTransactions.count)] Checking vendor history...")
-            historySpinner.start()
-            let historyResult = try await historyMatcher.refine(
-                suggestion: suggestion,
-                transaction: transaction,
-                client: client,
-                bankAccountId: targetAccountId
-            )
-            historySpinner.stop(message: "Ready")
+            aiSpinner.stop(message: "Ready")
 
             let categorizedTx = CategorizedTransaction(
                 transaction: transaction,

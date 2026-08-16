@@ -206,8 +206,7 @@ public final class ReviewSession {
                 client: workspace.client,
                 bankAccounts: workspace.bankAccounts,
                 existingVendors: workspace.vendors,
-                accountType: account.accountType,
-                bankAccountId: account.accountId
+                accountType: account.accountType
             )
             return Prepared(
                 draft: CategorizedTransaction(transaction: transaction, suggestion: result.suggestion),

@@ -7,6 +7,32 @@ public struct HistoryMatchResult: Sendable {
     public let debugLines: [String]
 }
 
+/// The slice of Zoho the history matcher needs. A protocol seam so the
+/// matching logic is unit-testable without a network client.
+public protocol VendorHistorySource: Sendable {
+    /// Resolve a vendor name to its Zoho contact ID, or nil if unknown.
+    func findVendorId(name: String) async throws -> String?
+    /// All prior expenses recorded for a vendor.
+    func fetchExpenses(vendorId: String) async throws -> [ZBExpense]
+}
+
+/// Production source backed by the Zoho Books API.
+public struct ZohoVendorHistorySource: VendorHistorySource {
+    private let client: ZohoBooksClient<ZohoOAuth>
+
+    public init(client: ZohoBooksClient<ZohoOAuth>) {
+        self.client = client
+    }
+
+    public func findVendorId(name: String) async throws -> String? {
+        try await client.searchContactByName(name, contactType: "vendor")?.contactId
+    }
+
+    public func fetchExpenses(vendorId: String) async throws -> [ZBExpense] {
+        try await client.fetchExpenses(vendorId: vendorId)
+    }
+}
+
 /// Refines Claude's transaction suggestions using historical expense data from Zoho Books.
 /// When a vendor has been categorized before, overrides Claude's category (and description)
 /// with the historically most-used values.
@@ -21,12 +47,11 @@ public actor HistoryMatcher {
 
     public init() {}
 
-    /// Refine a suggestion by checking Zoho expense history for the same vendor.
+    /// Refine a suggestion by checking expense history for the same vendor.
     public func refine(
         suggestion: TransactionSuggestion,
         transaction: ZBBankTransaction,
-        client: ZohoBooksClient<ZohoOAuth>,
-        bankAccountId: String
+        source: any VendorHistorySource
     ) async throws -> HistoryMatchResult {
         var debugLines: [String] = []
 
@@ -44,8 +69,7 @@ public actor HistoryMatcher {
         if let cached = vendorIdCache[cacheKey] {
             vendorId = cached
         } else {
-            let vendor = try await client.searchContactByName(vendorName, contactType: "vendor")
-            vendorId = vendor?.contactId
+            vendorId = try await source.findVendorId(name: vendorName)
             vendorIdCache[cacheKey] = vendorId
         }
 
@@ -59,7 +83,7 @@ public actor HistoryMatcher {
         if let cached = expenseCache[vendorId] {
             expenses = cached
         } else {
-            expenses = try await client.fetchExpenses(vendorId: vendorId)
+            expenses = try await source.fetchExpenses(vendorId: vendorId)
             expenseCache[vendorId] = expenses
         }
 
