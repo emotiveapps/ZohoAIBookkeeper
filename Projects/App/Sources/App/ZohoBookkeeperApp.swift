@@ -3,12 +3,12 @@ import BookkeeperCore
 
 @main
 struct ZohoBookkeeperApp: App {
-    @StateObject private var appState = AppState()
+    @State private var model = AppModel()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(appState)
+            RootView()
+                .environment(model)
         }
     }
 }

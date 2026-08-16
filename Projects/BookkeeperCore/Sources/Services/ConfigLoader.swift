@@ -8,6 +8,12 @@ public enum ConfigLoader {
         }
 
         let data = try Data(contentsOf: url)
+        return try parse(data)
+    }
+
+    /// Decode a `config.json`-format payload (snake_case keys). Shared by the CLI's
+    /// bundled-config loading and the app's paste-to-import flow.
+    public static func parse(_ data: Data) throws -> FullConfiguration {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
 

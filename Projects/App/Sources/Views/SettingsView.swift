@@ -2,207 +2,135 @@ import SwiftUI
 import BookkeeperCore
 
 struct SettingsView: View {
-    @EnvironmentObject var appState: AppState
-    let isInitialSetup: Bool
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let workspace: Workspace
 
-    @State private var clientId = ""
-    @State private var clientSecret = ""
-    @State private var accessToken = ""
-    @State private var refreshToken = ""
-    @State private var organizationId = ""
-    @State private var region = "com"
-    @State private var anthropicApiKey = ""
-
-    @State private var isConnecting = false
-    @State private var showingClearConfirmation = false
+    @State private var form = CredentialsFormModel()
+    @State private var isSaving = false
+    @State private var saveError: String?
+    @State private var showingSignOutConfirmation = false
+    @State private var showingResetConfirmation = false
+    @State private var didResetCache = false
 
     var body: some View {
         NavigationStack {
             Form {
-                // Zoho Configuration
-                Section {
-                    TextField("Client ID", text: $clientId)
-                        .autocorrectionDisabled()
-                        .textContentType(.username)
+                statusSection
+                CredentialsFormSections(form: $form)
 
-                    SecureField("Client Secret", text: $clientSecret)
-
-                    SecureField("Access Token", text: $accessToken)
-
-                    SecureField("Refresh Token", text: $refreshToken)
-
-                    TextField("Organization ID", text: $organizationId)
-                        .autocorrectionDisabled()
-
-                    Picker("Region", selection: $region) {
-                        Text("US (.com)").tag("com")
-                        Text("EU (.eu)").tag("eu")
-                        Text("India (.in)").tag("in")
-                        Text("Australia (.au)").tag("au")
-                    }
-                } header: {
-                    Text("Zoho Books")
-                } footer: {
-                    Text("Enter your Zoho Books API credentials. You can get these from the Zoho Developer Console.")
-                }
-
-                // Anthropic Configuration
-                Section {
-                    SecureField("API Key", text: $anthropicApiKey)
-                } header: {
-                    Text("Anthropic (Claude AI)")
-                } footer: {
-                    Text("Enter your Anthropic API key for AI-powered categorization suggestions.")
-                }
-
-                // Connection Status
-                if appState.isConfigured {
-                    Section("Status") {
-                        HStack {
-                            Text("Connection")
-                            Spacer()
-                            if appState.isConnected {
-                                Label("Connected", systemImage: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
-                            } else if appState.connectionError != nil {
-                                Label("Error", systemImage: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(.red)
-                            } else {
-                                Label("Not Connected", systemImage: "circle")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if let error = appState.connectionError {
-                            Text(error)
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                        }
-
-                        if appState.isConnected {
-                            LabeledContent("Accounts") {
-                                Text("\(appState.bankAccounts.count)")
-                            }
-
-                            LabeledContent("Categories") {
-                                Text("\(appState.categories.count)")
-                            }
-
-                            LabeledContent("Vendors") {
-                                Text("\(appState.vendors.count)")
-                            }
-                        }
+                if let saveError {
+                    Section {
+                        Label(saveError, systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                            .font(.callout)
                     }
                 }
 
-                // Actions
                 Section {
                     Button {
-                        Task {
-                            await saveAndConnect()
-                        }
+                        Task { await saveAndReconnect() }
                     } label: {
                         HStack {
                             Spacer()
-                            if isConnecting {
-                                ProgressView()
-                                    .padding(.trailing, 8)
-                            }
-                            Text(appState.isConfigured ? "Save & Reconnect" : "Connect")
-                                .fontWeight(.semibold)
+                            if isSaving { ProgressView().padding(.trailing, 6) }
+                            Text("Save & Reconnect").fontWeight(.semibold)
                             Spacer()
                         }
                     }
-                    .disabled(isConnecting || !isFormValid)
+                    .disabled(isSaving || !form.isValid)
+                }
 
-                    if appState.isConfigured {
-                        Button("Clear Configuration", role: .destructive) {
-                            showingClearConfirmation = true
-                        }
-                    }
+                maintenanceSection
+            }
+            .navigationTitle("Settings")
+            #if !os(macOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
                 }
             }
-            .navigationTitle(isInitialSetup ? "Setup" : "Settings")
             .onAppear {
-                loadCurrentConfiguration()
-            }
-            .confirmationDialog(
-                "Clear Configuration",
-                isPresented: $showingClearConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Clear", role: .destructive) {
-                    appState.clearConfiguration()
-                    clearForm()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will remove all saved credentials. You'll need to re-enter them to use the app.")
+                form.apply(workspace.configuration)
             }
         }
     }
 
-    private var isFormValid: Bool {
-        !clientId.isEmpty &&
-        !clientSecret.isEmpty &&
-        !accessToken.isEmpty &&
-        !refreshToken.isEmpty &&
-        !organizationId.isEmpty &&
-        !anthropicApiKey.isEmpty
-    }
-
-    private func loadCurrentConfiguration() {
-        if let zoho = appState.zohoConfig {
-            clientId = zoho.clientId
-            clientSecret = zoho.clientSecret
-            accessToken = zoho.accessToken
-            refreshToken = zoho.refreshToken
-            organizationId = zoho.organizationId
-            region = zoho.region
-        }
-
-        if let anthropic = appState.anthropicConfig {
-            anthropicApiKey = anthropic.apiKey
+    private var statusSection: some View {
+        Section("Connection") {
+            LabeledContent("Accounts", value: "\(workspace.bankAccounts.count)")
+            LabeledContent("Categories", value: "\(workspace.categories.count)")
+            LabeledContent("Vendors", value: "\(workspace.vendors.count)")
+            LabeledContent("Category source") {
+                Text(workspace.categoryConfigs.isEmpty ? "Zoho chart of accounts" : "Imported hierarchy")
+                    .foregroundStyle(.secondary)
+            }
+            if let error = workspace.lastError {
+                Label(error, systemImage: "wifi.exclamationmark")
+                    .foregroundStyle(.red)
+                    .font(.callout)
+            }
         }
     }
 
-    private func clearForm() {
-        clientId = ""
-        clientSecret = ""
-        accessToken = ""
-        refreshToken = ""
-        organizationId = ""
-        region = "com"
-        anthropicApiKey = ""
+    private var maintenanceSection: some View {
+        Section {
+            Button(didResetCache ? "Local progress cleared" : "Clear local progress") {
+                showingResetConfirmation = true
+            }
+            .disabled(didResetCache)
+
+            Button("Sign Out", role: .destructive) {
+                showingSignOutConfirmation = true
+            }
+        } header: {
+            Text("Maintenance")
+        } footer: {
+            Text("Clearing local progress forgets which transactions were processed or skipped on this device; they'll show up for review again. Signing out removes credentials from the Keychain.")
+        }
+        .confirmationDialog(
+            "Clear local progress?",
+            isPresented: $showingResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Clear", role: .destructive) {
+                Task { await clearCache() }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog(
+            "Sign out?",
+            isPresented: $showingSignOutConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Sign Out", role: .destructive) {
+                dismiss()
+                model.signOut()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Credentials will be removed from this device.")
+        }
     }
 
-    private func saveAndConnect() async {
-        isConnecting = true
-
-        let zohoConfig = ZohoConfiguration(
-            clientId: clientId,
-            clientSecret: clientSecret,
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            organizationId: organizationId,
-            region: region
-        )
-
-        let anthropicConfig = AnthropicConfiguration(apiKey: anthropicApiKey)
-
-        await appState.configure(zoho: zohoConfig, anthropic: anthropicConfig)
-        await appState.connect()
-
-        isConnecting = false
+    private func saveAndReconnect() async {
+        isSaving = true
+        saveError = nil
+        saveError = await model.submitCredentials(form.configuration)
+        isSaving = false
+        if saveError == nil {
+            dismiss()
+        }
     }
-}
 
-#Preview("Initial Setup") {
-    SettingsView(isInitialSetup: true)
-        .environmentObject(AppState())
-}
-
-#Preview("Settings") {
-    SettingsView(isInitialSetup: false)
-        .environmentObject(AppState())
+    private func clearCache() async {
+        guard let cache = workspace.cache else { return }
+        await cache.clear()
+        try? await cache.save()
+        didResetCache = true
+        await workspace.refreshCacheStats()
+        await workspace.refreshPendingCounts()
+    }
 }
