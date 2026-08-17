@@ -205,6 +205,18 @@ public final class ReviewSession {
     }
 
     private func apply(_ prepared: Prepared) {
+        var prepared = prepared
+        // The AI can suggest a type that isn't valid for this direction
+        // (e.g. .refund on a credit-card credit); an out-of-list selection
+        // renders the type picker blank. Clamp to .skip — valid for both
+        // directions, and Save-as-skip never writes to Zoho.
+        let types = TransactionType.availableTypes(
+            isDebit: prepared.draft.transaction.isDebit,
+            accountType: account.accountType
+        )
+        if !types.contains(prepared.draft.selectedType) {
+            prepared.draft.selectedType = .skip
+        }
         draft = prepared.draft
         historyNotes = prepared.historyNotes
     }

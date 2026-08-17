@@ -155,7 +155,7 @@ struct ReviewView: View {
 
     private func decisionCard(_ session: ReviewSession, draft: CategorizedTransaction) -> some View {
         VStack(spacing: 0) {
-            Picker("Type", selection: binding(session, \.selectedType)) {
+            Picker("Type", selection: binding(session, draft, \.selectedType)) {
                 ForEach(session.availableTypes, id: \.self) { type in
                     Text(type.displayName).tag(type)
                 }
@@ -201,7 +201,7 @@ struct ReviewView: View {
 
             if draft.selectedType == .transfer {
                 Divider()
-                Picker("To account", selection: binding(session, \.transferToAccountId)) {
+                Picker("To account", selection: binding(session, draft, \.transferToAccountId)) {
                     Text("Choose…").tag(nil as String?)
                     ForEach(transferTargets, id: \.accountId) { target in
                         Text(target.accountName).tag(target.accountId as String?)
@@ -212,7 +212,7 @@ struct ReviewView: View {
             }
 
             Divider()
-            TextField("Description", text: binding(session, \.description), axis: .vertical)
+            TextField("Description", text: binding(session, draft, \.description), axis: .vertical)
                 .lineLimit(1 ... 3)
                 .decisionRow()
 
@@ -284,16 +284,17 @@ struct ReviewView: View {
         workspace.bankAccounts.filter { $0.accountId != account.accountId }
     }
 
-    /// Two-way binding into the optional draft held by the session.
+    /// Two-way binding into the optional draft held by the session. UIKit can
+    /// read a binding after Save/Skip cleared the draft (e.g. a menu picker
+    /// mid-dismiss), so reads fall back to the snapshot the row was built from;
+    /// writes to a gone draft are no-ops.
     private func binding<Value>(
         _ session: ReviewSession,
+        _ snapshot: CategorizedTransaction,
         _ keyPath: WritableKeyPath<CategorizedTransaction, Value>
     ) -> Binding<Value> where Value: Sendable {
         Binding {
-            guard let draft = session.draft else {
-                fatalError("Editing bindings are only reachable while a draft exists")
-            }
-            return draft[keyPath: keyPath]
+            (session.draft ?? snapshot)[keyPath: keyPath]
         } set: { newValue in
             session.draft?[keyPath: keyPath] = newValue
         }
