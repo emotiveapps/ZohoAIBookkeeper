@@ -18,7 +18,7 @@ public final class Workspace {
     public let receiptPipeline: ReceiptPipeline?
     /// Graph client for the configured receipt mailbox (nil when receipts
     /// aren't configured). Sign-in state lives in this device's Keychain.
-    public let graphMail: GraphMailClient?
+    public let graphMail: MicrosoftGraphMailClient?
 
     public private(set) var bankAccounts: [ZBBankAccount] = []
     public private(set) var categories: [String] = []
@@ -53,7 +53,7 @@ public final class Workspace {
             self.cache = nil
         }
 
-        let graphMail = (configuration.receipts?.mailboxes.first).map { GraphMailClient(config: $0) }
+        let graphMail = (configuration.receipts?.mailboxes.first).map { MicrosoftGraphMailClient(config: $0) }
         self.graphMail = graphMail
 
         do {

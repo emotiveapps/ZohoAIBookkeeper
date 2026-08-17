@@ -33,7 +33,7 @@ struct Receipts: AsyncParsableCommand {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let engine = try GraphDriveSyncEngine(
-            graph: GraphMailClient(config: mailbox),
+            graph: MicrosoftGraphMailClient(config: mailbox),
             folderPath: receipts.resolvedArchiveFolderPath,
             cacheRoot: caches.appendingPathComponent("com.emotiveapps.ZohoBookkeeper/ReceiptsArchive"),
             stagingRoot: support.appendingPathComponent("com.emotiveapps.ZohoBookkeeper/ArchiveStaging"),
@@ -63,7 +63,7 @@ struct Receipts: AsyncParsableCommand {
         func run() async throws {
             let config = try ConfigLoader.load()
             for mailbox in try Receipts.mailboxes(from: config) {
-                let graph = GraphMailClient(config: mailbox)
+                let graph = MicrosoftGraphMailClient(config: mailbox)
                 if await graph.isSignedIn && !force {
                     print("✓ \(mailbox.address): already signed in (use --force to redo)")
                     continue
@@ -125,7 +125,7 @@ struct Receipts: AsyncParsableCommand {
             var lastPipeline: ReceiptPipeline?
             for mailbox in try Receipts.mailboxes(from: config) {
                 print("\n\(Terminal.bold)\(mailbox.address)\(Terminal.reset)")
-                let graph = GraphMailClient(config: mailbox)
+                let graph = MicrosoftGraphMailClient(config: mailbox)
                 let pipeline = ReceiptPipeline(
                     graph: graph,
                     driveFolder: onedrive?.folderPath,
@@ -146,7 +146,7 @@ struct Receipts: AsyncParsableCommand {
                     ?? mailboxes[0]
                 print("\n\(Terminal.bold)OneDrive: \(onedrive.folderPath)\(Terminal.reset)")
                 let pipeline = ReceiptPipeline(
-                    graph: GraphMailClient(config: auth),
+                    graph: MicrosoftGraphMailClient(config: auth),
                     driveFolder: onedrive.folderPath,
                     parser: parser,
                     store: store,
@@ -272,7 +272,7 @@ struct Receipts: AsyncParsableCommand {
                 throw ValidationError("No receipt mailboxes configured.")
             }
             let pipeline = ReceiptPipeline(
-                graph: GraphMailClient(config: mailboxConfig),
+                graph: MicrosoftGraphMailClient(config: mailboxConfig),
                 driveFolder: config.receipts?.onedrive?.folderPath,
                 parser: ReceiptParser(apiKey: config.anthropic.apiKey),
                 store: store,

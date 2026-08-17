@@ -66,7 +66,7 @@ it can be lifted into other apps as-is (the owner intends to reuse it):
 
 ```
 GraphDriveSyncEngine (actor) — reusable component
- ├─ graph: GraphMailClient        // reuses existing auth + drive methods
+ ├─ graph: MicrosoftGraphMailClient        // reuses existing auth + drive methods
  ├─ folderPath: String            // the synced OneDrive folder
  ├─ cache: local cache dir + index.json
  ├─ staging: pending-upload dir + queue
@@ -167,7 +167,7 @@ none of this touches the Zoho quota at all.
   `record`, `fileData`) but is constructed over the **cache root** and gains
   the engine as its backing writer — `ReceiptPipeline` and both front ends are
   unchanged except for wiring.
-- `GraphMailClient` gains `uploadDriveItem` (PUT content / upload session +
+- `MicrosoftGraphMailClient` gains `uploadDriveItem` (PUT content / upload session +
   `If-Match`) — listing, download, ensure-folder, and move already exist.
 - `receipts.archive_path` in config is replaced by the fixed cloud path
   (`03_Finance/ZohoAIBookkeeper/Receipts Archive`), configurable as

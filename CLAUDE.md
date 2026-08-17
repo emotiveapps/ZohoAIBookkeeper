@@ -69,7 +69,7 @@ BookkeeperCore (framework; @_exported imports ZohoBooksClient)
                                     split; opt-in receipt-coverage check)
                TaxReadinessReportFormatter (markdown/CSV) + CategoryFilter
                                     (expense + inventory/COGS account sourcing)
-               GraphMailClient (Microsoft Graph device-code OAuth + shared-mailbox
+               MicrosoftGraphMailClient (Microsoft Graph device-code OAuth + shared-mailbox
                                 reading; tokens in Keychain per tenant+mailbox)
                ReceiptParser (Claude extraction: PDF/image native, HTML stripped;
                               Haiku default) / ReceiptMatcher (pure matching) /

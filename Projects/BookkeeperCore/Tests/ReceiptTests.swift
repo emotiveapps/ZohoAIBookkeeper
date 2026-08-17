@@ -304,8 +304,8 @@ struct GraphDriveSyncEngineTests {
     @Test("Delta tokens are extracted from deltaLink URLs")
     func deltaTokenExtraction() {
         let link = "https://graph.microsoft.com/v1.0/me/drive/root/delta?token=aTokenValue123"
-        #expect(GraphMailClient.token(fromDeltaLink: link) == "aTokenValue123")
-        #expect(GraphMailClient.token(fromDeltaLink: "https://example.com/no-token") == nil)
+        #expect(MicrosoftGraphMailClient.token(fromDeltaLink: link) == "aTokenValue123")
+        #expect(MicrosoftGraphMailClient.token(fromDeltaLink: "https://example.com/no-token") == nil)
     }
 
     @Test("Staging overlays cache in local file listings")
@@ -315,7 +315,7 @@ struct GraphDriveSyncEngineTests {
         defer { try? FileManager.default.removeItem(at: base) }
 
         let engine = try GraphDriveSyncEngine(
-            graph: GraphMailClient(config: GraphMailboxConfig(tenantId: "t", clientId: "c", address: "a@x.com")),
+            graph: MicrosoftGraphMailClient(config: GraphMailboxConfig(tenantId: "t", clientId: "c", address: "a@x.com")),
             folderPath: "Test/Folder",
             cacheRoot: base.appendingPathComponent("cache"),
             stagingRoot: base.appendingPathComponent("staging"),

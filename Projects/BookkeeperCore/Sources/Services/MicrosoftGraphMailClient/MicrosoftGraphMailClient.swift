@@ -5,7 +5,7 @@ import Security
 /// Minimal Microsoft Graph client for reading a (shared) mailbox via
 /// delegated `Mail.Read.Shared`, authenticated with the device-code flow
 /// (public client — no secret; tokens live in the Keychain).
-public actor GraphMailClient {
+public actor MicrosoftGraphMailClient {
     public struct DeviceCode: Sendable {
         public let userCode: String
         public let verificationURI: String

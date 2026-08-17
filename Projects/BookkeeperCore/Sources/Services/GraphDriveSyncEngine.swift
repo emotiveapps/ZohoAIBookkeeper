@@ -30,7 +30,7 @@ public actor GraphDriveSyncEngine {
         public var warnings: [String] = []
     }
 
-    private let graph: GraphMailClient
+    private let graph: MicrosoftGraphMailClient
     /// Drive-root-relative path of the synced folder, e.g.
     /// "03_Finance/ZohoAIBookkeeper/Receipts Archive".
     private let folderPath: String
@@ -47,7 +47,7 @@ public actor GraphDriveSyncEngine {
     private var indexURL: URL { cacheRoot.appendingPathComponent("index.json") }
 
     public init(
-        graph: GraphMailClient,
+        graph: MicrosoftGraphMailClient,
         folderPath: String,
         cacheRoot: URL,
         stagingRoot: URL,
@@ -249,7 +249,7 @@ public actor GraphDriveSyncEngine {
                 let remotePath = "\(folderPath)/\(relativePath)"
                 let existing = index[relativePath]
 
-                let uploaded: GraphMailClient.UploadedItem
+                let uploaded: MicrosoftGraphMailClient.UploadedItem
                 if let eTag = existing?.eTag {
                     do {
                         uploaded = try await graph.uploadDriveItem(

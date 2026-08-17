@@ -43,7 +43,7 @@ public actor ReceiptPipeline {
 
     /// Nil when the pipeline only processes local files (iOS share extension) —
     /// mailbox operations are skipped in that mode.
-    private let graph: GraphMailClient?
+    private let graph: MicrosoftGraphMailClient?
     /// OneDrive folder path swept as a second receipts inbox (nil = disabled).
     private let driveFolder: String?
     private let parser: ReceiptParser
@@ -56,7 +56,7 @@ public actor ReceiptPipeline {
     private let minimumImageBytes = 20_000
 
     public init(
-        graph: GraphMailClient? = nil,
+        graph: MicrosoftGraphMailClient? = nil,
         driveFolder: String? = nil,
         parser: ReceiptParser,
         store: ReceiptStore,
@@ -307,7 +307,7 @@ public actor ReceiptPipeline {
     }
 
     private func fileDriveItem(
-        _ item: GraphMailClient.DriveItem,
+        _ item: MicrosoftGraphMailClient.DriveItem,
         into folder: MailFolder,
         dryRun: Bool,
         summary: inout SyncSummary
@@ -396,7 +396,7 @@ public actor ReceiptPipeline {
     }
 
     private func fileAlreadyIngested(
-        message: GraphMailClient.MailMessage,
+        message: MicrosoftGraphMailClient.MailMessage,
         dryRun: Bool,
         summary: inout SyncSummary
     ) async throws {
@@ -448,8 +448,8 @@ public actor ReceiptPipeline {
     }
 
     private func ingest(
-        message: GraphMailClient.MailMessage,
-        graph: GraphMailClient,
+        message: MicrosoftGraphMailClient.MailMessage,
+        graph: MicrosoftGraphMailClient,
         dryRun: Bool,
         summary: inout SyncSummary
     ) async throws -> IngestOutcome {
