@@ -101,4 +101,6 @@ just test-app   # app unit tests (iOS simulator)
 - **iOS/iPad app** — rewritten (Aug 2026) around a triage-first review flow: Keychain-persisted credentials, live AI suggestions with prefetch, searchable hierarchical category picker, vendor creation, adaptive iPhone/iPad layout. Includes a **share extension** ("Save to Bookkeeper"): share any receipt PDF/photo from any app and the Receipts screen parses, archives, and matches it to a Zoho expense. Builds and unit-tests clean; needs a run on a real device against live data to shake out UX.
 - **Watch app** — shows the real pending count synced from the iPhone via Watch Connectivity; the complication reads the same stored value.
 
+There's also `scripts/reconcile_statements.py`: point it at downloaded bank-statement CSVs and it diffs them against Zoho (correctly handling Zoho's hidden-uncategorized API quirk) and writes import files for anything missing.
+
 See `CODE_REVIEW.md` for the code-quality review and the resolution log of everything fixed since, and `CLAUDE.md` for contributor/agent-oriented documentation.

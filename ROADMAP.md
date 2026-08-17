@@ -75,7 +75,7 @@ Monthly digest (CLI command now, scheduled later): spend by category vs. trailin
 2. **Income-side completeness** — everything here is expense-focused, but audits start with income. Reconcile Zoho sales/deposits against Stripe/PayPal accounts (both exist in your account list) so unexplained deposits get categorized too.
 3. **Zoho data export/backup** — periodic local export of the full books (you're relying on a SaaS to hold 7 years of audit history; `export --year` partially covers this — consider an `export --all`).
 4. **Business/personal separation hygiene** — the categorizer already knows "owner contribution"; report on how often personal cards pay business expenses (each is an audit-narrative liability worth minimizing).
-5. **Reconciliation against statements** — gap detection catches missing *feeds*; a per-statement-period balance check (start balance + transactions = end balance) catches missing *transactions*. Bigger lift (needs statement input); park it as a stretch goal.
+5. **Reconciliation against statements** — gap detection catches missing *feeds*; statement reconciliation catches missing *transactions*. **Done (Aug 17, 2026)** for six accounts via `scripts/reconcile_statements.py`: ~100 genuinely missing transactions identified and imported, ~154 duplicate uncategorized lines excluded (reversibly). Also corrected the record: the "feeds died Jan 2026" finding was an artifact of Zoho's API hiding uncategorized lines — feeds were healthy, transactions were just piling up uncategorized since ~Oct 2025. Remaining hole: AMEX Amazon Business 2026 history (card migrated to US Bank; owner calling Amex).
 
 ## Critical files
 

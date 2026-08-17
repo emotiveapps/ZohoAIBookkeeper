@@ -107,6 +107,12 @@ BookkeeperCore (framework; @_exported imports ZohoBooksClient)
         persists count for the complication), ContentView, PendingCountComplication
 ```
 
+**Zoho API quirks (verified live, Aug 2026 — cost us a whole debugging saga):**
+- `/banktransactions` listings **exclude uncategorized statement lines** unless queried with `status=uncategorized` — `filter_by=Status.All` does NOT mean all. `ZohoBooksClient.fetchTransactions(status: .all)` handles the merge; never query the raw endpoint expecting completeness.
+- `date_start`/`date_end` are **ignored** on those listings — always filter by date client-side (GapDetector and TaxReadinessAuditor do).
+- Uncategorized lines can't be DELETEd via API; use `POST /banktransactions/uncategorized/{id}/exclude` (reversible via Restore in the UI). Used to purge ~154 duplicate lines in Aug 2026 (audit logs in `tmp/z_Archived/*.json`).
+- `scripts/reconcile_statements.py` reconciles bank CSV exports against Zoho and emits statement-import files for missing transactions — extend its account table when new statements arrive (AMEX 2026 history pending).
+
 Key invariants:
 
 - **Credit-card semantics**: on `credit_card` accounts, credits are purchases. All direction logic must go through `TransactionType.isUserExpense(isDebit:accountType:)` / `availableTypes` — never raw `isDebit`.
