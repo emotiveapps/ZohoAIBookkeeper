@@ -80,7 +80,10 @@ struct Receipts: AsyncParsableCommand {
                 sinceDate = nil
             }
 
+            // Every sync skips its own retry pass; one shared pass runs at the
+            // end instead (the retry pass is the Zoho-API-heavy part).
             let onedrive = config.receipts?.onedrive
+            var lastPipeline: ReceiptPipeline?
             for mailbox in try Receipts.mailboxes(from: config) {
                 print("\n\(Terminal.bold)\(mailbox.address)\(Terminal.reset)")
                 let graph = GraphMailClient(config: mailbox)
@@ -91,8 +94,9 @@ struct Receipts: AsyncParsableCommand {
                     store: store,
                     zoho: zoho
                 )
+                lastPipeline = pipeline
 
-                let summary = try await pipeline.sync(dryRun: dryRun, since: sinceDate)
+                let summary = try await pipeline.sync(dryRun: dryRun, since: sinceDate, runRetryPass: false)
                 printSummary(summary, scanned: "message(s)")
             }
 
@@ -108,8 +112,15 @@ struct Receipts: AsyncParsableCommand {
                     store: store,
                     zoho: zoho
                 )
-                let summary = try await pipeline.syncDrive(dryRun: dryRun)
+                lastPipeline = pipeline
+                let summary = try await pipeline.syncDrive(dryRun: dryRun, runRetryPass: false)
                 printSummary(summary, scanned: "file(s)")
+            }
+
+            if let lastPipeline, !dryRun {
+                print("\n\(Terminal.bold)Retry pass\(Terminal.reset)")
+                let summary = try await lastPipeline.retryPending()
+                printSummary(summary, scanned: "receipt(s)")
             }
 
             print("\nArchive: \(try ReceiptStore().rootURL.path)")

@@ -27,6 +27,18 @@ public actor ReceiptPipeline {
         public var movedMessages = 0
         public var errors = 0
         public var lines: [String] = []
+
+        public mutating func merge(_ other: SyncSummary) {
+            messagesSeen += other.messagesSeen
+            newReceipts += other.newReceipts
+            matched += other.matched
+            ambiguous += other.ambiguous
+            pending += other.pending
+            retriedMatches += other.retriedMatches
+            movedMessages += other.movedMessages
+            errors += other.errors
+            lines += other.lines
+        }
     }
 
     /// Nil when the pipeline only processes local files (iOS share extension) —
@@ -86,13 +98,17 @@ public actor ReceiptPipeline {
         return (record, summary.lines.last ?? "")
     }
 
-    /// Retry matching for all pending receipts (no mailbox needed; emails
-    /// are promoted when a graph client is available).
+    /// Retry matching for all pending receipts (no mailbox needed; emails and
+    /// drive files are promoted when a graph client is available).
     public func retryPending() async throws -> SyncSummary {
+        await retryPendingInternal(dryRun: false)
+    }
+
+    private func retryPendingInternal(dryRun: Bool) async -> SyncSummary {
         var summary = SyncSummary()
         for record in await store.allRecords() where record.status == .pending {
             do {
-                if try await rematch(record, dryRun: false, summary: &summary) {
+                if try await rematch(record, dryRun: dryRun, summary: &summary) {
                     summary.retriedMatches += 1
                 }
             } catch {
@@ -103,7 +119,10 @@ public actor ReceiptPipeline {
         return summary
     }
 
-    public func sync(dryRun: Bool = false, since: Date? = nil) async throws -> SyncSummary {
+    /// - Parameter runRetryPass: set false when the caller orchestrates several
+    ///   syncs (mail + drive) and wants a single hold-&-retry pass at the end
+    ///   instead of one per sync — the retry pass is the API-heavy part.
+    public func sync(dryRun: Bool = false, since: Date? = nil, runRetryPass: Bool = true) async throws -> SyncSummary {
         guard let graph else {
             throw GraphError.notSignedIn(mailbox: "(no mailbox configured for this pipeline)")
         }
@@ -155,15 +174,9 @@ public actor ReceiptPipeline {
 
         // Hold & retry: previously unmatched receipts get another look now that
         // new expenses may exist in Zoho. Successful matches promote the email.
-        for record in await store.allRecords() where record.status == .pending {
-            do {
-                if try await rematch(record, dryRun: dryRun, summary: &summary) {
-                    summary.retriedMatches += 1
-                }
-            } catch {
-                summary.errors += 1
-                summary.lines.append("error retrying \(record.parsed?.vendor ?? record.id): \(error.localizedDescription)")
-            }
+        if runRetryPass {
+            let retry = await retryPendingInternal(dryRun: dryRun)
+            summary.merge(retry)
         }
 
         if !dryRun {
@@ -181,7 +194,7 @@ public actor ReceiptPipeline {
     /// file types (scripts, CSVs, zips) are never touched. Files are only
     /// ever moved, never deleted — on the happy path the folder root and its
     /// organizational subfolders end up empty.
-    public func syncDrive(dryRun: Bool = false) async throws -> SyncSummary {
+    public func syncDrive(dryRun: Bool = false, runRetryPass: Bool = true) async throws -> SyncSummary {
         guard let graph, let driveFolder else {
             throw GraphError.notSignedIn(mailbox: "(no OneDrive folder configured for this pipeline)")
         }
@@ -252,15 +265,9 @@ public actor ReceiptPipeline {
 
         // Hold & retry, same as the mailbox sync. Promoted receipts get their
         // source (email or drive file) refiled too.
-        for record in await store.allRecords() where record.status == .pending {
-            do {
-                if try await rematch(record, dryRun: dryRun, summary: &summary) {
-                    summary.retriedMatches += 1
-                }
-            } catch {
-                summary.errors += 1
-                summary.lines.append("error retrying \(record.parsed?.vendor ?? record.id): \(error.localizedDescription)")
-            }
+        if runRetryPass {
+            let retry = await retryPendingInternal(dryRun: dryRun)
+            summary.merge(retry)
         }
         return summary
     }

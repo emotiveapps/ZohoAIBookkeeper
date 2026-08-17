@@ -33,8 +33,8 @@ test-app: generate
     xcodebuild -workspace ZohoAIBookkeeper.xcworkspace -scheme ZohoBookkeeperApp \
         -configuration Debug -destination "platform=iOS Simulator,name=iPhone 17" test
 
-# Install the CLI to ~/.zoho-ai-bookkeeper/bin and schedule receipts sync
-# every 4 hours (and at login) via a LaunchAgent
+# (Re)schedule sync separately with `just schedule` / `just unschedule`.
+# Install or update the CLI in ~/.zoho-ai-bookkeeper/bin (schedule untouched)
 install: generate
     #!/usr/bin/env bash
     set -euo pipefail
@@ -53,6 +53,18 @@ install: generate
     # DYLD_FRAMEWORK_PATH. Re-sign (ad-hoc) since editing rpaths breaks the signature.
     install_name_tool -add_rpath @executable_path "$BIN/ZohoBookkeeperCLI" 2>/dev/null || true
     codesign -f -s - "$BIN/ZohoBookkeeperCLI"
+    echo "Installed $BIN/ZohoBookkeeperCLI"
+    echo "  Run a sync:            $BIN/ZohoBookkeeperCLI receipts sync"
+    echo "  Schedule 4-hour syncs: just schedule"
+    echo "NOTE: if macOS shows a Keychain prompt on first run, click 'Always Allow'"
+    echo "(the installed binary is distinct from the dev build that saved the tokens)."
+
+# Schedule receipts sync every 4 hours (and at login) via a LaunchAgent
+schedule:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    BIN="$HOME/.zoho-ai-bookkeeper/bin"
+    [ -x "$BIN/ZohoBookkeeperCLI" ] || { echo "CLI not installed — run 'just install' first."; exit 1; }
     PLIST="$HOME/Library/LaunchAgents/com.emotiveapps.zoho-bookkeeper.receipts-sync.plist"
     mkdir -p "$HOME/Library/LaunchAgents"
     cat > "$PLIST" <<PLISTEOF
@@ -78,11 +90,20 @@ install: generate
     PLISTEOF
     launchctl bootout "gui/$(id -u)" "$PLIST" 2>/dev/null || true
     launchctl bootstrap "gui/$(id -u)" "$PLIST"
-    echo "Installed. Sync runs every 4h and at login."
+    echo "Scheduled. Sync runs every 4h and at login."
     echo "  Force a run:  launchctl kickstart -k gui/$(id -u)/com.emotiveapps.zoho-bookkeeper.receipts-sync"
     echo "  Watch logs:   tail -f ~/.zoho-ai-bookkeeper/logs/receipts-sync.log"
-    echo "NOTE: if macOS shows a Keychain prompt on first run, click 'Always Allow'"
-    echo "(the installed binary is distinct from the dev build that saved the tokens)."
+    echo "  Stop syncing: just unschedule"
+
+# Stop the scheduled receipts sync (keeps the installed CLI)
+unschedule:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    PLIST="$HOME/Library/LaunchAgents/com.emotiveapps.zoho-bookkeeper.receipts-sync.plist"
+    launchctl bootout "gui/$(id -u)" "$PLIST" 2>/dev/null || true
+    rm -f "$PLIST"
+    echo "Receipts sync unscheduled. Run manually with:"
+    echo "  ~/.zoho-ai-bookkeeper/bin/ZohoBookkeeperCLI receipts sync"
 
 # Leaves config, tokens, cache, logs, and the receipts archive untouched.
 # Remove the installed CLI and the scheduled receipts-sync LaunchAgent

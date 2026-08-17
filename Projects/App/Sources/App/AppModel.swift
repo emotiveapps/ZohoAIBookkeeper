@@ -93,6 +93,9 @@ public final class Workspace {
     public let cache: CacheService?
     public let receiptStore: ReceiptStore?
     public let receiptPipeline: ReceiptPipeline?
+    /// Graph client for the configured receipt mailbox (nil when receipts
+    /// aren't configured). Sign-in state lives in this device's Keychain.
+    public let graphMail: GraphMailClient?
 
     public private(set) var bankAccounts: [ZBBankAccount] = []
     public private(set) var categories: [String] = []
@@ -127,11 +130,18 @@ public final class Workspace {
             self.cache = nil
         }
 
+        let graphMail = (configuration.receipts?.mailboxes.first).map { GraphMailClient(config: $0) }
+        self.graphMail = graphMail
+
         do {
             let store = try ReceiptStore()
             self.receiptStore = store
-            // No mailbox on iOS — the pipeline only processes shared files here.
+            // With a Microsoft sign-in on this device the pipeline can sweep
+            // the mailbox and OneDrive folder; without one it still processes
+            // shared files and retries pendings.
             self.receiptPipeline = ReceiptPipeline(
+                graph: graphMail,
+                driveFolder: configuration.receipts?.onedrive?.folderPath,
                 parser: ReceiptParser(apiKey: configuration.anthropic.apiKey),
                 store: store,
                 zoho: client
@@ -285,10 +295,12 @@ public final class Workspace {
 
     public var isSyncingReceipts: Bool { receiptSyncStatus == .running }
 
-    /// Process the share-extension queue, then retry all pending receipts
-    /// against Zoho. The retry pass is API-heavy, which is why the UI warns
-    /// when re-triggered within 24 hours. State lives here (not on a screen)
-    /// so Settings can be closed and revisited while a sync runs.
+    /// Process the share-extension queue, sweep the receipt mailbox and
+    /// OneDrive folder (when signed in on this device), then retry all pending
+    /// receipts against Zoho — one retry pass total, since that's the
+    /// API-heavy part and the reason the UI warns when re-triggered within
+    /// 24 hours. State lives here (not on a screen) so Settings can be closed
+    /// and revisited while a sync runs.
     public func syncReceiptsNow() async {
         guard !isSyncingReceipts, let receiptPipeline else { return }
         receiptSyncStatus = .running
@@ -316,6 +328,27 @@ public final class Workspace {
             }
         }
 
+        var mailReceipts: Int?
+        var driveReceipts: Int?
+        if let graphMail, await graphMail.isSignedIn {
+            do {
+                let summary = try await receiptPipeline.sync(runRetryPass: false)
+                mailReceipts = summary.newReceipts
+                if summary.errors > 0 { errors.append("\(summary.errors) mailbox error(s)") }
+            } catch {
+                errors.append("mailbox: \(error.localizedDescription)")
+            }
+            if configuration.receipts?.onedrive != nil {
+                do {
+                    let summary = try await receiptPipeline.syncDrive(runRetryPass: false)
+                    driveReceipts = summary.newReceipts
+                    if summary.errors > 0 { errors.append("\(summary.errors) OneDrive error(s)") }
+                } catch {
+                    errors.append("OneDrive: \(error.localizedDescription)")
+                }
+            }
+        }
+
         var retried = 0
         do {
             let summary = try await receiptPipeline.retryPending()
@@ -326,6 +359,8 @@ public final class Workspace {
 
         var parts: [String] = []
         if sharedProcessed > 0 { parts.append("\(sharedProcessed) shared file(s) processed") }
+        if let mailReceipts { parts.append("\(mailReceipts) new from mail") }
+        if let driveReceipts { parts.append("\(driveReceipts) new from OneDrive") }
         parts.append(retried > 0 ? "\(retried) pending receipt(s) matched" : "no new matches")
         if !errors.isEmpty { parts.append("\(errors.count) error(s)") }
         let line = parts.joined(separator: " · ")
