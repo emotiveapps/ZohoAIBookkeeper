@@ -2,6 +2,7 @@ import SwiftUI
 import ZohoBooksClient
 import BookkeeperCore
 
+
 /// The triage loop for one account: one transaction at a time, AI suggestion
 /// pre-applied, Save/Skip at the bottom, auto-advance with prefetch.
 struct ReviewView: View {
@@ -301,10 +302,3 @@ struct ReviewView: View {
     }
 }
 
-private extension View {
-    func decisionRow() -> some View {
-        self
-            .padding(.horizontal)
-            .padding(.vertical, 12)
-    }
-}

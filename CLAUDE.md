@@ -123,6 +123,7 @@ Key invariants:
 
 ## Conventions
 
+- **One type per file (owner's rule, Aug 2026): every top-level Swift type lives in its own file named exactly after the type.** Ask the owner's permission before ever co-locating types. Multi-type services group into a folder named for the service (e.g. `Services/ReceiptStore/` holds `ReceiptStore.swift`, `SyncStateStore.swift`, `FileSyncState.swift`, `UserDefaultsSyncState.swift`). Nested types inside a parent are fine. **Extensions are never defined inside another file** — they live in an `Extensions/` folder as `Type+Topic.swift` (e.g. `View+DecisionRow.swift`). Adding files requires `just generate`.
 - Swift 6 language mode. Services are `actor`s; app models are `@MainActor @Observable`. `ClaudeService.service` keeps a justified `nonisolated(unsafe)` (SwiftAnthropic isn't Sendable) — don't "clean it up" without checking the region-isolation error it suppresses.
 - `logger` writes to **stderr** (the TUI owns stdout). Keep logging out of hot TUI paths anyway.
 - Zoho types are prefixed `ZB`; BookkeeperCore re-exports the module.

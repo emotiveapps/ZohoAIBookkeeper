@@ -1,6 +1,7 @@
 import SwiftUI
 import BookkeeperCore
 
+
 /// First-run onboarding: paste the CLI's config.json, or enter credentials by hand.
 /// Credentials are verified against Zoho before being stored in the Keychain.
 struct SetupView: View {
@@ -115,85 +116,3 @@ struct SetupView: View {
     }
 }
 
-// MARK: - Shared credentials form
-
-/// Form state for credentials, shared by SetupView and SettingsView.
-struct CredentialsFormModel {
-    var clientId = ""
-    var clientSecret = ""
-    var accessToken = ""
-    var refreshToken = ""
-    var organizationId = ""
-    var region = "com"
-    var anthropicApiKey = ""
-    /// Category hierarchy carried through JSON import (not editable in the form).
-    var categoryMapping: CategoryMappingConfig?
-
-    var isValid: Bool {
-        !clientId.isEmpty && !clientSecret.isEmpty && !accessToken.isEmpty
-            && !refreshToken.isEmpty && !organizationId.isEmpty && !anthropicApiKey.isEmpty
-    }
-
-    var configuration: FullConfiguration {
-        FullConfiguration(
-            zoho: ZohoConfiguration(
-                clientId: clientId,
-                clientSecret: clientSecret,
-                accessToken: accessToken,
-                refreshToken: refreshToken,
-                organizationId: organizationId,
-                region: region
-            ),
-            anthropic: AnthropicConfiguration(apiKey: anthropicApiKey),
-            categoryMapping: categoryMapping
-        )
-    }
-
-    mutating func apply(_ config: FullConfiguration) {
-        clientId = config.zoho.clientId
-        clientSecret = config.zoho.clientSecret
-        accessToken = config.zoho.accessToken
-        refreshToken = config.zoho.refreshToken
-        organizationId = config.zoho.organizationId
-        region = config.zoho.region
-        anthropicApiKey = config.anthropic.apiKey
-        categoryMapping = config.categoryMapping
-    }
-}
-
-struct CredentialsFormSections: View {
-    @Binding var form: CredentialsFormModel
-
-    var body: some View {
-        Section("Zoho Books") {
-            TextField("Client ID", text: $form.clientId)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-            SecureField("Client Secret", text: $form.clientSecret)
-            SecureField("Access Token", text: $form.accessToken)
-            SecureField("Refresh Token", text: $form.refreshToken)
-            TextField("Organization ID", text: $form.organizationId)
-                .autocorrectionDisabled()
-                .keyboardType(.numberPad)
-            Picker("Region", selection: $form.region) {
-                Text("US (.com)").tag("com")
-                Text("EU (.eu)").tag("eu")
-                Text("India (.in)").tag("in")
-                Text("Australia (.au)").tag("au")
-            }
-        }
-
-        Section {
-            SecureField("API Key", text: $form.anthropicApiKey)
-        } header: {
-            Text("Anthropic")
-        } footer: {
-            Text("Used for AI categorization suggestions.")
-        }
-    }
-}
-
-#Preview {
-    SetupView()
-        .environment(AppModel(credentialsStore: InMemoryCredentialsStore()))
-}
