@@ -49,6 +49,10 @@ install: generate
     cp -R "$BUILD_DIR/ZohoBookkeeperCLI" "$BIN/"
     cp -R "$BUILD_DIR"/*.framework "$BIN/"
     find "$BUILD_DIR" -maxdepth 1 -name "*.bundle" -exec cp -R {} "$BIN/" \;
+    # Let the binary find its frameworks next to itself, so it runs without
+    # DYLD_FRAMEWORK_PATH. Re-sign (ad-hoc) since editing rpaths breaks the signature.
+    install_name_tool -add_rpath @executable_path "$BIN/ZohoBookkeeperCLI" 2>/dev/null || true
+    codesign -f -s - "$BIN/ZohoBookkeeperCLI"
     PLIST="$HOME/Library/LaunchAgents/com.emotiveapps.zoho-bookkeeper.receipts-sync.plist"
     mkdir -p "$HOME/Library/LaunchAgents"
     cat > "$PLIST" <<PLISTEOF
