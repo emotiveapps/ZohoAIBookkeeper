@@ -3,7 +3,6 @@ import Observation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// Receipt archive + triage: share-queue processing, pending retries, and
 /// one-tap resolution of ambiguous matches.
 struct ReceiptsView: View {
@@ -125,4 +124,3 @@ struct ReceiptsView: View {
         }
     }
 }
-

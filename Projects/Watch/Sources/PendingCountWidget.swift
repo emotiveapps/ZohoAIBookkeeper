@@ -2,7 +2,6 @@
 import WidgetKit
 import SwiftUI
 
-
 /// WidgetKit widget definition
 struct PendingCountWidget: Widget {
     let kind: String = "PendingCountWidget"
@@ -31,4 +30,3 @@ struct PendingCountWidget: Widget {
     PendingCountEntry(pendingCount: 12)
 }
 #endif
-

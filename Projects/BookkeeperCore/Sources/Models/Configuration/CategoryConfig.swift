@@ -1,6 +1,5 @@
 import Foundation
 
-
 public struct CategoryConfig: Codable, Sendable {
     public let name: String
     public let children: [String]?
@@ -10,4 +9,3 @@ public struct CategoryConfig: Codable, Sendable {
         self.children = children
     }
 }
-

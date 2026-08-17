@@ -1,7 +1,6 @@
 import Foundation
 import Security
 
-
 /// Keychain storage for Graph tokens, one item per (tenant, mailbox).
 public struct GraphTokenStore: Sendable {
     private let service = "com.emotiveapps.ZohoBookkeeper.graph"
@@ -15,7 +14,7 @@ public struct GraphTokenStore: Sendable {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: account
         ]
     }
 
@@ -49,4 +48,3 @@ public struct GraphTokenStore: Sendable {
         SecItemDelete(baseQuery as CFDictionary)
     }
 }
-

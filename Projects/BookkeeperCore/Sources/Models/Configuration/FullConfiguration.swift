@@ -1,6 +1,5 @@
 import Foundation
 
-
 public struct FullConfiguration: Codable, Sendable {
     public let zoho: ZohoConfiguration
     public let anthropic: AnthropicConfiguration
@@ -35,4 +34,3 @@ public struct FullConfiguration: Codable, Sendable {
         return URL(string: "https://books.zoho.com/app/\(zoho.organizationId)#\(fragment)")
     }
 }
-

@@ -1,6 +1,5 @@
 import Foundation
 
-
 public struct CategoryMappingConfig: Codable, Sendable {
     public let categories: [CategoryConfig]
 
@@ -18,4 +17,3 @@ public struct CategoryMappingConfig: Codable, Sendable {
         }
     }
 }
-

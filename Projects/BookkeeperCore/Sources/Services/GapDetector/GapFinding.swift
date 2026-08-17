@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// A suspicious quiet period in an account's transaction feed.
 public struct GapFinding: Sendable, Equatable {
     public enum Kind: Sendable, Equatable {
@@ -27,4 +26,3 @@ public struct GapFinding: Sendable, Equatable {
     public let days: Int
     public let summary: String
 }
-

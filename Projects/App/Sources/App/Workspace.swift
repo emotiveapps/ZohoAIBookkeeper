@@ -3,7 +3,6 @@ import Observation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// A connected session: Zoho + Claude clients plus the reference data every screen needs.
 @MainActor
 @Observable
@@ -360,4 +359,3 @@ public final class Workspace {
         return count
     }
 }
-

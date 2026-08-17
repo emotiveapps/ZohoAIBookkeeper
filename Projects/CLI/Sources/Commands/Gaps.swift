@@ -3,7 +3,6 @@ import Foundation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 struct Gaps: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Detect bank-feed outages: quiet periods far outside each account's normal cadence"
@@ -83,4 +82,3 @@ struct Gaps: AsyncParsableCommand {
         }.joined()
     }
 }
-

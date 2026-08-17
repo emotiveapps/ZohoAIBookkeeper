@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 public enum ReceiptMatchOutcome: Sendable {
     /// Exactly one expense fits well enough to attach without asking.
     case confident(ZBExpense)
@@ -10,4 +9,3 @@ public enum ReceiptMatchOutcome: Sendable {
     /// Nothing fits yet — hold and retry after future syncs.
     case none
 }
-

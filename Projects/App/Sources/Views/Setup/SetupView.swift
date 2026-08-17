@@ -1,7 +1,6 @@
 import SwiftUI
 import BookkeeperCore
 
-
 /// First-run onboarding: paste the CLI's config.json, or enter credentials by hand.
 /// Credentials are verified against Zoho before being stored in the Keychain.
 struct SetupView: View {
@@ -115,4 +114,3 @@ struct SetupView: View {
         isConnecting = false
     }
 }
-

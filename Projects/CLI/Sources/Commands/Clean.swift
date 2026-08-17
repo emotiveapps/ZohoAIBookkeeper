@@ -3,7 +3,6 @@ import Foundation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 struct Clean: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Interactively clean up uncategorized transactions"
@@ -138,7 +137,10 @@ struct Clean: AsyncParsableCommand {
             // Show editor
             let tx = transaction
             let txnGroup = tx.isDebit ? "money_out" : "money_in"
-            let zohoURL = "https://books.zoho.com/app/\(config.zoho.organizationId)#/banking/transactions/details?account_id=\(targetAccountId)&bankaccount_id=\(targetAccountId)&transaction_id=\(tx.transactionId)&filter_by=Status.Uncategorized&txn_group=\(txnGroup)&txn_status=uncategorized"
+            let zohoURL = "https://books.zoho.com/app/\(config.zoho.organizationId)"
+                + "#/banking/transactions/details?account_id=\(targetAccountId)"
+                + "&bankaccount_id=\(targetAccountId)&transaction_id=\(tx.transactionId)"
+                + "&filter_by=Status.Uncategorized&txn_group=\(txnGroup)&txn_status=uncategorized"
             let editor = TransactionEditor(
                 terminal: terminal,
                 transaction: categorizedTx,
@@ -206,4 +208,3 @@ struct Clean: AsyncParsableCommand {
         try await cacheService.save()
     }
 }
-

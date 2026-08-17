@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Which chart-of-accounts entries a spend can be categorized against.
 /// Period expenses plus inventory/COGS accounts (inventory purchases are
 /// recorded as assets at purchase time; see CLAUDE.md on LEGO/COGS handling).
@@ -17,4 +16,3 @@ public enum CategoryFilter {
             .sorted()
     }
 }
-

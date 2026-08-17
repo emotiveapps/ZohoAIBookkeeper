@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// Terminal handling for raw mode input and ANSI escape code output
 public final class Terminal {
     private var originalTermios: termios?
@@ -240,4 +239,3 @@ public final class Terminal {
         fflush(stdout)
     }
 }
-

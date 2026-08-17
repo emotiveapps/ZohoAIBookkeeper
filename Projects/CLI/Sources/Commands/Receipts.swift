@@ -178,7 +178,9 @@ struct Receipts: AsyncParsableCommand {
                 print("  \(line)")
             }
             print("  \(Terminal.dim)\(summary.messagesSeen) \(scanned) scanned, \(summary.movedMessages) filed\(Terminal.reset)")
-            var line = "  \(Terminal.brightGreen)\(summary.matched) matched\(Terminal.reset) · \(Terminal.brightYellow)\(summary.ambiguous) ambiguous\(Terminal.reset) · \(summary.pending) pending · \(summary.newReceipts) new receipt(s)"
+            var line = "  \(Terminal.brightGreen)\(summary.matched) matched\(Terminal.reset)"
+                + " · \(Terminal.brightYellow)\(summary.ambiguous) ambiguous\(Terminal.reset)"
+                + " · \(summary.pending) pending · \(summary.newReceipts) new receipt(s)"
             if summary.errors > 0 {
                 line += " · \(Terminal.brightRed)\(summary.errors) error(s)\(Terminal.reset)"
             }
@@ -284,7 +286,11 @@ struct Receipts: AsyncParsableCommand {
                 _ = try await engine.push()
             }
 
-            print("\(Terminal.brightGreen)✓\(Terminal.reset) Attached \(record.parsed?.vendor ?? record.id) to \(detail.vendorName ?? "expense") (\(detail.date ?? "")) \(TaxReadinessReportFormatter.money(detail.total ?? detail.amount ?? 0))")
+            let amount = TaxReadinessReportFormatter.money(detail.total ?? detail.amount ?? 0)
+            print(
+                "\(Terminal.brightGreen)✓\(Terminal.reset) Attached \(record.parsed?.vendor ?? record.id)"
+                    + " to \(detail.vendorName ?? "expense") (\(detail.date ?? "")) \(amount)"
+            )
         }
     }
 }

@@ -2,7 +2,6 @@ import SwiftUI
 import ZohoBooksClient
 import BookkeeperCore
 
-
 extension View {
     func decisionRow() -> some View {
         self
@@ -10,4 +9,3 @@ extension View {
             .padding(.vertical, 12)
     }
 }
-

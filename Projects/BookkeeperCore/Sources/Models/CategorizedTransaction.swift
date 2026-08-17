@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// A transaction with its suggested categorization for display/editing
 public struct CategorizedTransaction: Sendable {
     public let transaction: ZBBankTransaction
@@ -24,4 +23,3 @@ public struct CategorizedTransaction: Sendable {
         self.transferToAccountId = nil
     }
 }
-

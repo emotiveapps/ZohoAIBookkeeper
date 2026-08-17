@@ -3,7 +3,6 @@ import WatchConnectivity
 import WidgetKit
 import BookkeeperCore
 
-
 /// Persists the pending count where both the watch app and the complication
 /// timeline provider can read it.
 enum PendingCountStorage {
@@ -24,4 +23,3 @@ enum PendingCountStorage {
         defaults.set(updatedAt.timeIntervalSince1970, forKey: updatedAtKey)
     }
 }
-

@@ -1,7 +1,6 @@
 import SwiftUI
 import BookkeeperCore
 
-
 /// Searchable vendor picker with free-text creation.
 struct VendorPickerSheet: View {
     let vendors: [String]
@@ -74,4 +73,3 @@ struct VendorPickerSheet: View {
         !trimmedQuery.isEmpty && !vendors.contains { $0.caseInsensitiveCompare(trimmedQuery) == .orderedSame }
     }
 }
-

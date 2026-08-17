@@ -48,7 +48,7 @@ struct HistoryMatcherTests {
             expensesByVendor: ["v1": [
                 expense(category: "Office Supplies"),
                 expense(category: "Office Supplies"),
-                expense(category: "Software"),
+                expense(category: "Software")
             ]]
         )
         let result = try await HistoryMatcher().refine(
@@ -66,7 +66,7 @@ struct HistoryMatcherTests {
             vendorIds: ["Acme": "v1"],
             expensesByVendor: ["v1": [
                 expense(category: "Meals"),
-                expense(category: "Travel"),
+                expense(category: "Travel")
             ]]
         )
         let result = try await HistoryMatcher().refine(
@@ -88,7 +88,7 @@ struct HistoryMatcherTests {
                 expense(category: "Software"),
                 expense(category: "Software"),
                 expense(category: nil),
-                expense(category: nil),
+                expense(category: nil)
             ]]
         )
         let result = try await HistoryMatcher().refine(
@@ -106,7 +106,7 @@ struct HistoryMatcherTests {
             expensesByVendor: ["v1": [
                 expense(category: "Software", amount: 42.00, description: "Monthly subscription"),
                 expense(category: "Software", amount: 42.00, description: "Monthly subscription"),
-                expense(category: "Software", amount: 999.99, description: "Annual plan"),
+                expense(category: "Software", amount: 999.99, description: "Annual plan")
             ]]
         )
         let result = try await HistoryMatcher().refine(
@@ -171,7 +171,7 @@ struct HistoryMatcherTests {
             expense(category: "Zebra", amount: 5, description: "B desc"),
             expense(category: "Alpha", amount: 5, description: "A desc"),
             expense(category: "Zebra", amount: 5, description: "A desc"),
-            expense(category: "Alpha", amount: 5, description: "B desc"),
+            expense(category: "Alpha", amount: 5, description: "B desc")
         ]
         var seen = Set<String>()
         for _ in 0 ..< 5 {

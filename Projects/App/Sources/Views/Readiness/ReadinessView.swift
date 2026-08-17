@@ -3,7 +3,6 @@ import Observation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// Per-year completeness report: blockers, per-account gaps, expense totals.
 struct ReadinessView: View {
     let workspace: Workspace
@@ -173,4 +172,3 @@ struct ReadinessView: View {
         }
     }
 }
-

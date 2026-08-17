@@ -2,7 +2,6 @@ import SwiftUI
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// AI confidence pill, same thresholds as the CLI (≥80 green, ≥50 orange, else red).
 struct ConfidenceBadge: View {
     let confidence: Int
@@ -20,4 +19,3 @@ struct ConfidenceBadge: View {
             .foregroundStyle(color)
     }
 }
-

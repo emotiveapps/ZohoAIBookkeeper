@@ -2,7 +2,6 @@ import Foundation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// Editable field types in the transaction editor
 public enum EditableField: Int, CaseIterable {
     case transactionType = 0
@@ -33,4 +32,3 @@ public enum EditableField: Int, CaseIterable {
         EditableField(rawValue: (self.rawValue - 1 + EditableField.allCases.count) % EditableField.allCases.count) ?? .viewOnWebButton
     }
 }
-

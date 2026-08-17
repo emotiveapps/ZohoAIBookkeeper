@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Production source backed by the Zoho Books API.
 public struct ZohoVendorHistorySource: VendorHistorySource {
     private let client: ZohoBooksClient<ZohoOAuth>
@@ -18,4 +17,3 @@ public struct ZohoVendorHistorySource: VendorHistorySource {
         try await client.fetchExpenses(vendorId: vendorId)
     }
 }
-

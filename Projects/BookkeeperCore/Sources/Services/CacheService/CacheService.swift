@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// Service for caching processed transactions
 public actor CacheService {
     private let cacheDirectory: URL
@@ -103,4 +102,3 @@ public actor CacheService {
         )
     }
 }
-

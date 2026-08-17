@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// The single implementation of "write this categorization decision to Zoho Books."
 /// Both the CLI and the iOS app must route saves through this type so their behavior can't drift.
 public struct TransactionCategorizer: Sendable {
@@ -102,4 +101,3 @@ public struct TransactionCategorizer: Sendable {
         return accountId
     }
 }
-

@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Detects bank-feed outages from transaction timelines. Pure logic — callers
 /// fetch transactions (all statuses) and pass them in.
 ///
@@ -167,4 +166,3 @@ public struct GapDetector: Sendable {
         dateFormatter.string(from: date)
     }
 }
-

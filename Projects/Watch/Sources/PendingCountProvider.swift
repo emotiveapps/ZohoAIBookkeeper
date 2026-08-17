@@ -2,7 +2,6 @@
 import WidgetKit
 import SwiftUI
 
-
 /// Timeline provider for the complication
 struct PendingCountProvider: TimelineProvider {
     func placeholder(in context: Context) -> PendingCountEntry {

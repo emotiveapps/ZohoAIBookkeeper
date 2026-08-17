@@ -2,7 +2,6 @@
 import WidgetKit
 import SwiftUI
 
-
 /// Complication view
 struct PendingCountComplicationView: View {
     @Environment(\.widgetFamily) var family

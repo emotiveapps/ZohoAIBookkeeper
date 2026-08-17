@@ -3,7 +3,6 @@ import Observation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// App lifecycle: credential loading, connection, and the active workspace.
 @MainActor
 @Observable
@@ -81,4 +80,3 @@ public final class AppModel {
         phase = .needsSetup
     }
 }
-

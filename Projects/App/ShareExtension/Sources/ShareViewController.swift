@@ -34,7 +34,7 @@ final class ShareViewController: UIViewController {
             checkmark.widthAnchor.constraint(equalToConstant: 56),
             checkmark.heightAnchor.constraint(equalToConstant: 56),
             label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.topAnchor.constraint(equalTo: checkmark.bottomAnchor, constant: 12),
+            label.topAnchor.constraint(equalTo: checkmark.bottomAnchor, constant: 12)
         ])
 
         Task { await saveSharedItems() }
@@ -88,7 +88,7 @@ final class ShareViewController: UIViewController {
         let metadata: [String: Any] = [
             "originalName": provider.suggestedName ?? "shared.\(ext)",
             "contentType": specific.preferredMIMEType ?? (type == .pdf ? "application/pdf" : "image/jpeg"),
-            "sharedAt": ISO8601DateFormatter().string(from: Date()),
+            "sharedAt": ISO8601DateFormatter().string(from: Date())
         ]
 
         do {

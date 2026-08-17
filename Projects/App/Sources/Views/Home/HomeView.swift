@@ -2,7 +2,6 @@ import SwiftUI
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// Accounts sidebar + review detail. Collapses to a stack on iPhone.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
@@ -143,4 +142,3 @@ struct HomeView: View {
         }
     }
 }
-

@@ -53,7 +53,7 @@ public actor ReceiptPipeline {
     private let matcher: ReceiptMatcher
 
     /// Attachments smaller than this are almost always logos/signatures.
-    private let minimumImageBytes = 20_000
+    private let minimumImageBytes = 20000
 
     public init(
         graph: MicrosoftGraphMailClient? = nil,

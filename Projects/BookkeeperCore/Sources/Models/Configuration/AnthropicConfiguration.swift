@@ -1,6 +1,5 @@
 import Foundation
 
-
 public struct AnthropicConfiguration: Codable, Sendable {
     public let apiKey: String
 
@@ -8,4 +7,3 @@ public struct AnthropicConfiguration: Codable, Sendable {
         self.apiKey = apiKey
     }
 }
-

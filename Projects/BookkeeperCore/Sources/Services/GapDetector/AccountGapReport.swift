@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Per-account gap analysis result.
 public struct AccountGapReport: Sendable {
     public let accountId: String
@@ -19,4 +18,3 @@ public struct AccountGapReport: Sendable {
         findings.contains { $0.severity == .critical }
     }
 }
-

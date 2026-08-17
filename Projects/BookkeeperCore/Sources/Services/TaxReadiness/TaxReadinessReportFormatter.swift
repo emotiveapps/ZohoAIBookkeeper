@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Renders a `TaxReadinessReport` for humans and spreadsheets. Shared by the
 /// CLI's export command and (eventually) app-side share sheets.
 public enum TaxReadinessReportFormatter {
@@ -105,7 +104,7 @@ public enum TaxReadinessReportFormatter {
                 csvEscape(expense.vendorName),
                 csvEscape(expense.category),
                 String(format: "%.2f", expense.amount),
-                expense.expenseId,
+                expense.expenseId
             ].joined(separator: ","))
         }
         return rows.joined(separator: "\n") + "\n"
@@ -127,4 +126,3 @@ public enum TaxReadinessReportFormatter {
         return value
     }
 }
-

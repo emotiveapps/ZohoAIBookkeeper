@@ -22,7 +22,7 @@ final class WatchSync: NSObject, WCSessionDelegate, @unchecked Sendable {
         guard session.activationState == .activated else { return }
         try? session.updateApplicationContext([
             "totalPending": totalPending,
-            "updatedAt": Date().timeIntervalSince1970,
+            "updatedAt": Date().timeIntervalSince1970
         ])
     }
 

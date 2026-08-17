@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// CLI: a small JSON file kept next to config.json in the repo (gitignored) —
 /// operational state lives with the machine's working copy, never in the
 /// audit archive and never in a hidden home folder.
@@ -57,4 +56,3 @@ public struct FileSyncState: SyncStateStore {
         return state
     }
 }
-

@@ -1,7 +1,6 @@
 import Foundation
 import Security
 
-
 /// Stores the entire `FullConfiguration` as a single generic-password Keychain item.
 public struct KeychainCredentialsStore: CredentialsStore {
     private let service: String
@@ -19,7 +18,7 @@ public struct KeychainCredentialsStore: CredentialsStore {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: account
         ]
     }
 
@@ -66,4 +65,3 @@ public struct KeychainCredentialsStore: CredentialsStore {
         }
     }
 }
-

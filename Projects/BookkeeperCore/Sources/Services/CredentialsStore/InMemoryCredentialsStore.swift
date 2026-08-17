@@ -1,7 +1,6 @@
 import Foundation
 import Security
 
-
 /// Non-persistent store for previews and tests.
 public final class InMemoryCredentialsStore: CredentialsStore, @unchecked Sendable {
     private let lock = NSLock()
@@ -23,4 +22,3 @@ public final class InMemoryCredentialsStore: CredentialsStore, @unchecked Sendab
         lock.withLock { stored = nil }
     }
 }
-

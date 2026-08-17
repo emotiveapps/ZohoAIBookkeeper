@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// Animated spinner for showing progress during async operations
 public final class TerminalSpinner {
     private let terminal: Terminal
@@ -51,4 +50,3 @@ public final class TerminalSpinner {
         }
     }
 }
-

@@ -3,7 +3,6 @@ import Observation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 struct ReceiptRow: View {
     let record: ReceiptRecord
 
@@ -31,4 +30,3 @@ struct ReceiptRow: View {
         }
     }
 }
-

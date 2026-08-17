@@ -1,7 +1,6 @@
 import SwiftUI
 import BookkeeperCore
 
-
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -159,7 +158,11 @@ struct SettingsView: View {
         } header: {
             Text("Receipts")
         } footer: {
-            Text("Processes files shared to the app, sweeps the receipt mailbox and OneDrive folder when signed in to Microsoft on this device, and retries pending receipts against Zoho. You can close Settings while a sync runs and check back here.")
+            Text(
+                "Processes files shared to the app, sweeps the receipt mailbox and OneDrive folder "
+                    + "when signed in to Microsoft on this device, and retries pending receipts "
+                    + "against Zoho. You can close Settings while a sync runs and check back here."
+            )
         }
         .confirmationDialog(
             "Sync again already?",
@@ -255,4 +258,3 @@ struct SettingsView: View {
         await workspace.refreshPendingCounts()
     }
 }
-

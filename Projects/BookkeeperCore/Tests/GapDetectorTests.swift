@@ -125,7 +125,7 @@ struct TaxReadinessSummaryTests {
             expense(category: "Software", amount: 100),
             expense(category: "Inventory Asset", amount: 500),
             expense(category: "Inventory Asset", amount: 300),
-            expense(category: "Cost of Goods Sold", amount: 200),
+            expense(category: "Cost of Goods Sold", amount: 200)
         ]
         let (summary, inventory) = TaxReadinessAuditor.summarize(
             expenses: expenses,
@@ -143,7 +143,7 @@ struct TaxReadinessSummaryTests {
         let expenses = [
             expense(category: "Meals", amount: 50, vendor: nil),
             expense(category: "Software", amount: 500),
-            expense(category: "Meals", amount: 30, vendor: ""),
+            expense(category: "Meals", amount: 30, vendor: "")
         ]
         let (summary, inventory) = TaxReadinessAuditor.summarize(expenses: expenses, inventoryAccountNames: [])
         #expect(inventory == nil)
@@ -158,7 +158,7 @@ struct TaxReadinessSummaryTests {
             ZBAccount(accountId: "1", accountName: "Inventory Asset", accountType: "stock"),
             ZBAccount(accountId: "2", accountName: "Cost of Goods Sold", accountType: "cost_of_goods_sold"),
             ZBAccount(accountId: "3", accountName: "LEGO Inventory", accountType: "other_current_asset"),
-            ZBAccount(accountId: "4", accountName: "Software", accountType: "expense"),
+            ZBAccount(accountId: "4", accountName: "Software", accountType: "expense")
         ]
         let names = TaxReadinessAuditor.inventoryAccountNames(in: accounts)
         #expect(names == ["Inventory Asset", "Cost of Goods Sold", "LEGO Inventory"])

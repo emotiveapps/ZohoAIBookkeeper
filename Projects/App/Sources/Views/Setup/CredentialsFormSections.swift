@@ -1,7 +1,6 @@
 import SwiftUI
 import BookkeeperCore
 
-
 struct CredentialsFormSections: View {
     @Binding var form: CredentialsFormModel
 
@@ -38,4 +37,3 @@ struct CredentialsFormSections: View {
     SetupView()
         .environment(AppModel(credentialsStore: InMemoryCredentialsStore()))
 }
-

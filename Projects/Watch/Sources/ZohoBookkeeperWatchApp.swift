@@ -3,7 +3,6 @@ import WatchConnectivity
 import WidgetKit
 import BookkeeperCore
 
-
 @main
 struct ZohoBookkeeperWatchApp: App {
     @StateObject private var watchState = WatchState()
@@ -15,4 +14,3 @@ struct ZohoBookkeeperWatchApp: App {
         }
     }
 }
-

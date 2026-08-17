@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Claude's suggestion for categorizing a bank transaction
 public struct TransactionSuggestion: Codable, Sendable {
     /// The type of transaction (expense, transfer, sale, etc.)
@@ -43,4 +42,3 @@ public struct TransactionSuggestion: Codable, Sendable {
         self.reasoning = reasoning
     }
 }
-

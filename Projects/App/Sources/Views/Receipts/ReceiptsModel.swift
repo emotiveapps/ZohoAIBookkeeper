@@ -3,7 +3,6 @@ import Observation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// Drives the receipts screen: processes the share-extension queue, lists the
 /// archive, retries pending matches, and resolves ambiguous ones.
 @MainActor
@@ -112,4 +111,3 @@ final class ReceiptsModel {
         return results
     }
 }
-

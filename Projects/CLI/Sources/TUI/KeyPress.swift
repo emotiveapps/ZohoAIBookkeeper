@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// Key press types
 public enum KeyPress {
     case none
@@ -17,4 +16,3 @@ public enum KeyPress {
     case ctrlC
     case ctrlQ
 }
-

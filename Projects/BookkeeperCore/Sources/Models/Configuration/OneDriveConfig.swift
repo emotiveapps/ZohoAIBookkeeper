@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// A OneDrive folder that acts as a second receipts inbox. Files are read via
 /// Microsoft Graph using the sign-in of a configured mailbox (delegated
 /// `Files.ReadWrite` on the signed-in user's own OneDrive), so processing is
@@ -18,4 +17,3 @@ public struct OneDriveConfig: Codable, Sendable, Hashable {
         self.tenantId = tenantId
     }
 }
-

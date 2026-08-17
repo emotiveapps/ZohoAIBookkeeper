@@ -62,7 +62,7 @@ struct CredentialsFormModelTests {
             ),
             anthropic: AnthropicConfiguration(apiKey: "key"),
             categoryMapping: CategoryMappingConfig(categories: [
-                CategoryConfig(name: "Parent", children: ["Child A", "Child B"]),
+                CategoryConfig(name: "Parent", children: ["Child A", "Child B"])
             ])
         )
     }

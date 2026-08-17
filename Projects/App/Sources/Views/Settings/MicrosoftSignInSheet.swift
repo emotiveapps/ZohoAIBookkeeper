@@ -1,7 +1,6 @@
 import SwiftUI
 import BookkeeperCore
 
-
 /// Microsoft device-code sign-in: shows the code, opens the verification page,
 /// and waits for the browser-side sign-in to complete. Tokens land in this
 /// device's Keychain, unlocking mailbox + OneDrive sweeps from the app.
@@ -92,4 +91,3 @@ struct MicrosoftSignInSheet: View {
         }
     }
 }
-

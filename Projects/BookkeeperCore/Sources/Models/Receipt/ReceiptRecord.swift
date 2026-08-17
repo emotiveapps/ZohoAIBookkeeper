@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// The sidecar record stored next to each archived receipt file. The archive
 /// (file + sidecar) is the durable audit trail, independent of Zoho.
 public struct ReceiptRecord: Codable, Sendable, Identifiable {
@@ -79,4 +78,3 @@ public struct ReceiptRecord: Codable, Sendable, Identifiable {
         self.updatedAt = updatedAt
     }
 }
-

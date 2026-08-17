@@ -1,7 +1,6 @@
 import SwiftUI
 import BookkeeperCore
 
-
 /// Searchable category picker. Shows the two-level hierarchy from config when
 /// available, otherwise the flat Zoho expense-account list.
 struct CategoryPickerSheet: View {
@@ -81,4 +80,3 @@ struct CategoryPickerSheet: View {
         }
     }
 }
-

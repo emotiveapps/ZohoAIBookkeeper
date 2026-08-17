@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Everything the owner needs to know before filing a year's taxes.
 public struct TaxReadinessReport: Sendable {
     public struct AccountAudit: Sendable {
@@ -91,4 +90,3 @@ public struct TaxReadinessReport: Sendable {
         return result
     }
 }
-

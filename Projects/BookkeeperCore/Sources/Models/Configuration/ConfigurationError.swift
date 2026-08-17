@@ -1,6 +1,5 @@
 import Foundation
 
-
 public enum ConfigurationError: LocalizedError, Sendable {
     case fileNotFound(String)
     case invalidFormat(String)
@@ -17,4 +16,3 @@ public enum ConfigurationError: LocalizedError, Sendable {
         }
     }
 }
-

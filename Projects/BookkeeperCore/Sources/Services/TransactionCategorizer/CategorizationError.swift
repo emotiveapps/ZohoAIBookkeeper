@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Errors surfaced when a categorization decision can't be written to Zoho.
 /// These replace the old behavior of silently sending empty account IDs.
 public enum CategorizationError: LocalizedError, Sendable {
@@ -20,4 +19,3 @@ public enum CategorizationError: LocalizedError, Sendable {
         }
     }
 }
-

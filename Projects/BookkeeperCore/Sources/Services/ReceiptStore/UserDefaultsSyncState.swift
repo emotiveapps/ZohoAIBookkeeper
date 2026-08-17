@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// iPhone/iPad: UserDefaults behind a predefined, namespaced key set. All keys
 /// live in one place so the app's defaults surface stays auditable.
 public struct UserDefaultsSyncState: SyncStateStore {
@@ -36,4 +35,3 @@ public struct UserDefaultsSyncState: SyncStateStore {
         }
     }
 }
-

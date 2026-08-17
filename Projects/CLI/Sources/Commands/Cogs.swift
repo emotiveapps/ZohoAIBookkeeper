@@ -3,7 +3,6 @@ import Foundation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 struct Cogs: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Compute periodic COGS for a year: beginning inventory + purchases − ending inventory"
@@ -56,4 +55,3 @@ struct Cogs: AsyncParsableCommand {
         print("\n\(Terminal.dim)Give this to your accountant (Schedule C Part III). Confirm §471(c) treatment with your CPA.\(Terminal.reset)")
     }
 }
-

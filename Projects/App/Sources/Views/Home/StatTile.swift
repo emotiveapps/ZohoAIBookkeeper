@@ -2,7 +2,6 @@ import SwiftUI
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// Small dashboard statistic.
 struct StatTile: View {
     let title: String
@@ -24,4 +23,3 @@ struct StatTile: View {
         .background(.fill.quaternary, in: RoundedRectangle(cornerRadius: 8))
     }
 }
-

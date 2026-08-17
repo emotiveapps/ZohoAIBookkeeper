@@ -1,6 +1,5 @@
 import Foundation
 
-
 public struct ReceiptsConfig: Codable, Sendable {
     public let mailboxes: [GraphMailboxConfig]
     /// Optional OneDrive folder swept for receipt files alongside the mailboxes.
@@ -25,4 +24,3 @@ public struct ReceiptsConfig: Codable, Sendable {
         self.archiveFolderPath = archiveFolderPath
     }
 }
-

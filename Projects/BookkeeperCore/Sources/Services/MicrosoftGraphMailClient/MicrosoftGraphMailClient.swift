@@ -1,7 +1,6 @@
 import Foundation
 import Security
 
-
 /// Minimal Microsoft Graph client for reading a (shared) mailbox via
 /// delegated `Mail.Read.Shared`, authenticated with the device-code flow
 /// (public client — no secret; tokens live in the Keychain).
@@ -61,7 +60,7 @@ public actor MicrosoftGraphMailClient {
     public func beginDeviceLogin() async throws -> DeviceCode {
         let body = [
             "client_id": config.clientId,
-            "scope": Self.scope,
+            "scope": Self.scope
         ]
         let data = try await postForm(
             url: "https://login.microsoftonline.com/\(config.tenantId)/oauth2/v2.0/devicecode",
@@ -103,7 +102,7 @@ public actor MicrosoftGraphMailClient {
             let body = [
                 "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
                 "client_id": config.clientId,
-                "device_code": code.deviceCode,
+                "device_code": code.deviceCode
             ]
             let (data, status) = try await postFormRaw(
                 url: "https://login.microsoftonline.com/\(config.tenantId)/oauth2/v2.0/token",
@@ -407,7 +406,7 @@ public actor MicrosoftGraphMailClient {
     public func moveDriveItem(id: String, toFolderId folderId: String) async throws {
         let body: [String: Any] = [
             "parentReference": ["id": folderId],
-            "@microsoft.graph.conflictBehavior": "rename",
+            "@microsoft.graph.conflictBehavior": "rename"
         ]
         _ = try await send(
             url: "https://graph.microsoft.com/v1.0/me/drive/items/\(id)",
@@ -567,7 +566,7 @@ public actor MicrosoftGraphMailClient {
         let body: [String: Any] = [
             "name": name,
             "folder": [String: String](),
-            "@microsoft.graph.conflictBehavior": "fail",
+            "@microsoft.graph.conflictBehavior": "fail"
         ]
         let data = try await send(
             url: "https://graph.microsoft.com/v1.0/me/drive/items/\(parentId)/children",
@@ -596,7 +595,7 @@ public actor MicrosoftGraphMailClient {
                 "grant_type": "refresh_token",
                 "client_id": config.clientId,
                 "refresh_token": tokens.refreshToken,
-                "scope": Self.scope,
+                "scope": Self.scope
             ]
             let (data, status) = try await postFormRaw(
                 url: "https://login.microsoftonline.com/\(config.tenantId)/oauth2/v2.0/token",
@@ -699,4 +698,3 @@ public actor MicrosoftGraphMailClient {
         value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? value
     }
 }
-

@@ -3,7 +3,6 @@ import Foundation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 func createZohoClient(config: FullConfiguration, verbose: Bool) async throws -> ZohoBooksClient<ZohoOAuth> {
     let zohoConfig = ZohoConfig(
         clientId: config.zoho.clientId,
@@ -25,4 +24,3 @@ func fetchExpenseCategories(client: ZohoBooksClient<ZohoOAuth>) async throws -> 
     // to Inventory Asset instead of a period expense.
     return CategoryFilter.spendingCategories(from: accounts)
 }
-

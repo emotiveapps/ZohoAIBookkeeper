@@ -2,7 +2,6 @@ import Foundation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// Interactive transaction editor
 public final class TransactionEditor {
     private let terminal: Terminal
@@ -249,7 +248,10 @@ public final class TransactionEditor {
         // Description
         let descValue = isEditing && currentField == .description ? editBuffer : transaction.description
         let descDisplay = descValue.isEmpty ? "" : descValue
-        let descWithClear = isEditing && currentField == .description && !editBuffer.isEmpty ? "\(descDisplay) \(Terminal.dim)[→ clear]\(Terminal.reset)\(Terminal.bgBlue)\(Terminal.esc)97m" : descDisplay
+        let clearHint = "\(Terminal.dim)[→ clear]\(Terminal.reset)\(Terminal.bgBlue)\(Terminal.esc)97m"
+        let descWithClear = isEditing && currentField == .description && !editBuffer.isEmpty
+            ? "\(descDisplay) \(clearHint)"
+            : descDisplay
         terminal.printField(
             row: fieldStartRow + 3,
             col: fieldCol,
@@ -431,4 +433,3 @@ public final class TransactionEditor {
         try? process.run()
     }
 }
-

@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Matches a parsed receipt against candidate Zoho expenses. Pure logic.
 ///
 /// Rules: an expense is a candidate when its amount matches the receipt total
@@ -92,4 +91,3 @@ public struct ReceiptMatcher: Sendable {
         return String(String.UnicodeScalarView(filtered))
     }
 }
-

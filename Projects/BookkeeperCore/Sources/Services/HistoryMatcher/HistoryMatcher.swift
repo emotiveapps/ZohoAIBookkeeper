@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Refines Claude's transaction suggestions using historical expense data from Zoho Books.
 /// When a vendor has been categorized before, overrides Claude's category (and description)
 /// with the historically most-used values.
@@ -118,4 +117,3 @@ public actor HistoryMatcher {
         return counts.sorted { ($0.value, $1.key) > ($1.value, $0.key) }
     }
 }
-

@@ -1,6 +1,5 @@
 import Foundation
 
-
 public enum ReceiptStatus: String, Codable, Sendable {
     /// No matching Zoho expense yet — retried on every sync.
     case pending
@@ -11,4 +10,3 @@ public enum ReceiptStatus: String, Codable, Sendable {
     /// Deliberately ignored (not a receipt / duplicate).
     case skipped
 }
-

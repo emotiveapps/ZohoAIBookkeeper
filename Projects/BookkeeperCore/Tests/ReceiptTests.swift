@@ -21,7 +21,7 @@ struct ReceiptMatcherTests {
             receipt: receipt(total: 42.50),
             candidates: [
                 expense(id: "e1", date: "2026-08-11", amount: 42.50),
-                expense(id: "e2", date: "2026-08-11", amount: 99.00),
+                expense(id: "e2", date: "2026-08-11", amount: 99.00)
             ]
         )
         guard case .confident(let matched) = outcome else {
@@ -47,7 +47,7 @@ struct ReceiptMatcherTests {
     func vendorTieBreak() {
         let candidates = [
             expense(id: "e1", date: "2026-08-10", amount: 42.50, vendor: "Amazon.com"),
-            expense(id: "e2", date: "2026-08-11", amount: 42.50, vendor: "Staples"),
+            expense(id: "e2", date: "2026-08-11", amount: 42.50, vendor: "Staples")
         ]
         let winner = matcher.match(receipt: receipt(total: 42.50, vendor: "Amazon"), candidates: candidates)
         guard case .confident(let matched) = winner, matched.expenseId == "e1" else {

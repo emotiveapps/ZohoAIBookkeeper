@@ -2,7 +2,6 @@ import SwiftUI
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// The transaction being reviewed: amount (tinted by user-perspective direction),
 /// date, payee/description, reference.
 struct TransactionHeaderCard: View {
@@ -40,4 +39,3 @@ struct TransactionHeaderCard: View {
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
     }
 }
-

@@ -3,7 +3,6 @@ import Observation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// Runs the tax-readiness audit for a chosen year and holds its state.
 @MainActor
 @Observable
@@ -39,4 +38,3 @@ final class ReadinessModel {
         }
     }
 }
-

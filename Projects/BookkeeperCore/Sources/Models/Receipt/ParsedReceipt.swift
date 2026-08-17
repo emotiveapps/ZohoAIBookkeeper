@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// Fields Claude extracts from a receipt file.
 public struct ParsedReceipt: Codable, Sendable, Equatable {
     public var vendor: String?
@@ -30,4 +29,3 @@ public struct ParsedReceipt: Codable, Sendable, Equatable {
         self.notes = notes
     }
 }
-

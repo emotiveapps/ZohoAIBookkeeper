@@ -1,7 +1,6 @@
 import Foundation
 import Security
 
-
 public struct GraphTokens: Codable, Sendable {
     public var accessToken: String
     public var refreshToken: String
@@ -12,4 +11,3 @@ public struct GraphTokens: Codable, Sendable {
         now >= expiresAt.addingTimeInterval(-60)
     }
 }
-

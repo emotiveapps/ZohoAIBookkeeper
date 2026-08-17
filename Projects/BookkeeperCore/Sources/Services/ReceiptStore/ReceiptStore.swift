@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// The local receipt filing cabinet: original files plus JSON sidecars under
 /// `<root>/<year>/`. This archive is the durable audit trail (IRS retention),
 /// independent of what's attached in Zoho.
@@ -199,4 +198,3 @@ public actor ReceiptStore {
         return collapsed.isEmpty ? "receipt" : String(collapsed.prefix(32))
     }
 }
-

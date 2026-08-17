@@ -1,7 +1,6 @@
 import Foundation
 import Security
 
-
 public enum CredentialsStoreError: LocalizedError {
     case keychainStatus(OSStatus)
 
@@ -13,4 +12,3 @@ public enum CredentialsStoreError: LocalizedError {
         }
     }
 }
-

@@ -3,7 +3,6 @@ import Foundation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 @main
 struct ZohoBookkeeperCLI: AsyncParsableCommand {
     /// Line-buffer stdout even when piped, so long-polling commands (device-code
@@ -21,4 +20,3 @@ struct ZohoBookkeeperCLI: AsyncParsableCommand {
         defaultSubcommand: Clean.self
     )
 }
-

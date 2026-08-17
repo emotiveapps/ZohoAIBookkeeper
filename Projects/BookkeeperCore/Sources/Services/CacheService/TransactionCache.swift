@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// Model for cached transaction data
 public struct TransactionCache: Codable, Sendable {
     public var processedTransactions: Set<String> = []
@@ -9,4 +8,3 @@ public struct TransactionCache: Codable, Sendable {
 
     public init() {}
 }
-

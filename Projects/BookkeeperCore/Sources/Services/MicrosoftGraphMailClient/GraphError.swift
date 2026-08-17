@@ -1,7 +1,6 @@
 import Foundation
 import Security
 
-
 public enum GraphError: LocalizedError, Sendable {
     case notSignedIn(mailbox: String)
     case authorizationDeclined
@@ -27,4 +26,3 @@ public enum GraphError: LocalizedError, Sendable {
         }
     }
 }
-

@@ -3,7 +3,6 @@ import Foundation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 struct ListAccounts: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "list-accounts",
@@ -29,4 +28,3 @@ struct ListAccounts: AsyncParsableCommand {
         print("Total: \(accounts.count) accounts")
     }
 }
-

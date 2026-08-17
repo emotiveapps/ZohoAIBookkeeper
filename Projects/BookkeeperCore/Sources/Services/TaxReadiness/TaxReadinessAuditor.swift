@@ -1,7 +1,6 @@
 import Foundation
 import ZohoBooksClient
 
-
 /// Runs the per-year completeness audit against Zoho.
 public actor TaxReadinessAuditor {
     private let client: ZohoBooksClient<ZohoOAuth>
@@ -209,4 +208,3 @@ public actor TaxReadinessAuditor {
         )
     }
 }
-

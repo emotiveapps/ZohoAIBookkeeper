@@ -1,7 +1,6 @@
 import SwiftUI
 import BookkeeperCore
 
-
 /// Form state for credentials, shared by SetupView and SettingsView.
 struct CredentialsFormModel {
     var clientId = ""
@@ -45,4 +44,3 @@ struct CredentialsFormModel {
         categoryMapping = config.categoryMapping
     }
 }
-

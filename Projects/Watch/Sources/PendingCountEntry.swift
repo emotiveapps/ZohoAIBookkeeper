@@ -2,7 +2,6 @@
 import WidgetKit
 import SwiftUI
 
-
 /// Timeline entry for the complication
 struct PendingCountEntry: TimelineEntry {
     let date: Date

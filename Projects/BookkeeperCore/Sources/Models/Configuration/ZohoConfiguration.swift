@@ -1,6 +1,5 @@
 import Foundation
 
-
 public struct ZohoConfiguration: Codable, Sendable {
     public let clientId: String
     public let clientSecret: String
@@ -51,4 +50,3 @@ public struct ZohoConfiguration: Codable, Sendable {
         }
     }
 }
-

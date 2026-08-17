@@ -1,7 +1,6 @@
 import SwiftUI
 import BookkeeperCore
 
-
 /// Credential editing lives one level deep so the keys — which in practice
 /// never change — can't be clobbered from the main Settings screen.
 struct CredentialsEditorView: View {
@@ -60,4 +59,3 @@ struct CredentialsEditorView: View {
         }
     }
 }
-

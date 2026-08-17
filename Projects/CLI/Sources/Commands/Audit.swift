@@ -3,7 +3,6 @@ import Foundation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 struct Audit: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Tax-readiness report for a year: uncategorized counts, feed gaps, expense totals",
@@ -126,4 +125,3 @@ struct Audit: AsyncParsableCommand {
         return dir
     }
 }
-

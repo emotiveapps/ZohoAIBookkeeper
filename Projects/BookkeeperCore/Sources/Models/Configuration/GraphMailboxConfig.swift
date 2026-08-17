@@ -1,6 +1,5 @@
 import Foundation
 
-
 /// One Microsoft 365 mailbox polled for receipts, with the Entra app that
 /// grants access to it (device-code flow; no client secret).
 public struct GraphMailboxConfig: Codable, Sendable, Hashable {
@@ -15,4 +14,3 @@ public struct GraphMailboxConfig: Codable, Sendable, Hashable {
         self.address = address
     }
 }
-

@@ -2,7 +2,6 @@ import SwiftUI
 import ZohoBooksClient
 import BookkeeperCore
 
-
 struct AccountRow: View {
     let account: ZBBankAccount
     let pendingCount: Int?
@@ -43,4 +42,3 @@ struct AccountRow: View {
         .padding(.vertical, 2)
     }
 }
-

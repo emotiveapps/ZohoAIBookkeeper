@@ -3,7 +3,6 @@ import Observation
 import ZohoBooksClient
 import BookkeeperCore
 
-
 /// Pick the expense a receipt belongs to.
 struct CandidatePickerSheet: View {
     let model: ReceiptsModel
@@ -64,4 +63,3 @@ struct CandidatePickerSheet: View {
         }
     }
 }
-

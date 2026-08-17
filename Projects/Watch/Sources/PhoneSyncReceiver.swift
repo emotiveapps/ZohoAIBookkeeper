@@ -3,7 +3,6 @@ import WatchConnectivity
 import WidgetKit
 import BookkeeperCore
 
-
 /// WCSession receiver. Stateless except for the update callback; delegate
 /// callbacks arrive on arbitrary queues.
 final class PhoneSyncReceiver: NSObject, WCSessionDelegate, @unchecked Sendable {
@@ -39,4 +38,3 @@ final class PhoneSyncReceiver: NSObject, WCSessionDelegate, @unchecked Sendable 
         onUpdate?(count, updatedAt)
     }
 }
-

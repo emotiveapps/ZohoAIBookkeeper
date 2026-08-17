@@ -3,7 +3,6 @@ import WatchConnectivity
 import WidgetKit
 import BookkeeperCore
 
-
 /// Watch-side state: pending count received from the iPhone app via
 /// Watch Connectivity, persisted for the complication.
 @MainActor
@@ -36,4 +35,3 @@ final class WatchState: ObservableObject {
         isPhoneReachable = WCSession.isSupported() && WCSession.default.isReachable
     }
 }
-
