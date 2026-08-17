@@ -3,12 +3,16 @@ import Foundation
 /// Loads and decodes the CLI's configuration from disk.
 ///
 /// Search order:
-/// 1. `$ZOHO_BOOKKEEPER_CONFIG` (explicit path)
-/// 2. `~/.zoho-ai-bookkeeper/config.json`
+/// 1. `$ZOHO_BOOKKEEPER_CONFIG` (explicit path — the installed CLI's wrapper
+///    script sets this to the repo's config.json)
+/// 2. `config.json` in the current directory or any ancestor (dev runs from
+///    inside the repo)
 ///
-/// The config used to be bundled into the framework as a resource, which baked
-/// real credentials into every built product (including iOS app bundles). The
-/// iOS app stores credentials in the Keychain and never touches this loader.
+/// Owner's policy: the config lives *in the repo*, gitignored — it survives
+/// `just clean` and rebuilds, and dies with the repo. Never store it in a
+/// home-directory dotfolder or bundle it as a resource (bundling once baked
+/// real credentials into every built product, including iOS app bundles).
+/// The iOS app stores credentials in the Keychain and never touches this loader.
 public enum ConfigLoader {
     public static func load() throws -> FullConfiguration {
         let candidates = candidatePaths()
@@ -42,8 +46,15 @@ public enum ConfigLoader {
             paths.append(URL(fileURLWithPath: override))
         }
         #if os(macOS)
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        paths.append(home.appendingPathComponent(".zoho-ai-bookkeeper/config.json"))
+        // Walk up from the working directory so the CLI finds the repo's
+        // config.json when run from the repo or any of its subdirectories.
+        var directory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        for _ in 0 ..< 8 {
+            paths.append(directory.appendingPathComponent("config.json"))
+            let parent = directory.deletingLastPathComponent()
+            if parent.path == directory.path { break }
+            directory = parent
+        }
         #endif
         return paths
     }

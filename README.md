@@ -37,7 +37,7 @@ The iPhone/iPad app runs the same loop as a one-transaction-at-a-time review scr
 
    ```sh
    mkdir -p ~/.zoho-ai-bookkeeper
-   cp Projects/BookkeeperCore/config.example.json ~/.zoho-ai-bookkeeper/config.json
+   cp Projects/BookkeeperCore/config.example.json config.json   # repo root; gitignored
    ```
 
    It contains your Zoho OAuth credentials, Anthropic API key, and an optional hierarchical category list (`category_mapping`) used by the category picker; omit it and expense categories are fetched from your Zoho chart of accounts. Set `ZOHO_BOOKKEEPER_CONFIG` to point somewhere else. (The config is deliberately *not* bundled into built products — it holds real secrets.)

@@ -53,8 +53,16 @@ install: generate
     # DYLD_FRAMEWORK_PATH. Re-sign (ad-hoc) since editing rpaths breaks the signature.
     install_name_tool -add_rpath @executable_path "$BIN/ZohoBookkeeperCLI" 2>/dev/null || true
     codesign -f -s - "$BIN/ZohoBookkeeperCLI"
-    echo "Installed $BIN/ZohoBookkeeperCLI"
-    echo "  Run a sync:            $BIN/ZohoBookkeeperCLI receipts sync"
+    # Wrapper pins the repo's config.json (the config lives in the repo,
+    # gitignored) so the installed CLI works from any directory.
+    cat > "$BIN/zoho-bookkeeper" <<WRAPEOF
+    #!/bin/sh
+    export ZOHO_BOOKKEEPER_CONFIG="\${ZOHO_BOOKKEEPER_CONFIG:-{{justfile_directory()}}/config.json}"
+    exec "$BIN/ZohoBookkeeperCLI" "\$@"
+    WRAPEOF
+    chmod +x "$BIN/zoho-bookkeeper"
+    echo "Installed $BIN/zoho-bookkeeper (config: {{justfile_directory()}}/config.json)"
+    echo "  Run a sync:            $BIN/zoho-bookkeeper receipts sync"
     echo "  Schedule 4-hour syncs: just schedule"
     echo "NOTE: if macOS shows a Keychain prompt on first run, click 'Always Allow'"
     echo "(the installed binary is distinct from the dev build that saved the tokens)."
@@ -75,12 +83,10 @@ schedule:
         <key>Label</key><string>com.emotiveapps.zoho-bookkeeper.receipts-sync</string>
         <key>ProgramArguments</key>
         <array>
-            <string>$BIN/ZohoBookkeeperCLI</string>
+            <string>$BIN/zoho-bookkeeper</string>
             <string>receipts</string>
             <string>sync</string>
         </array>
-        <key>EnvironmentVariables</key>
-        <dict><key>DYLD_FRAMEWORK_PATH</key><string>$BIN</string></dict>
         <key>StartInterval</key><integer>14400</integer>
         <key>RunAtLoad</key><true/>
         <key>StandardOutPath</key><string>$HOME/.zoho-ai-bookkeeper/logs/receipts-sync.log</string>
