@@ -29,7 +29,7 @@ type_body_length:
   error: 600
 cyclomatic_complexity:
   warning: 12
-  error: 35
+  error: 10000  # never an error — warning-only by owner's preference
 
 opt_in_rules:
   - number_separator
