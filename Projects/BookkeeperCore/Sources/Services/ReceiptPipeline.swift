@@ -48,6 +48,7 @@ public actor ReceiptPipeline {
     private let driveFolder: String?
     private let parser: ReceiptParser
     private let store: ReceiptStore
+    private let syncState: any SyncStateStore
     private let zoho: ZohoBooksClient<ZohoOAuth>
     private let matcher: ReceiptMatcher
 
@@ -59,6 +60,7 @@ public actor ReceiptPipeline {
         driveFolder: String? = nil,
         parser: ReceiptParser,
         store: ReceiptStore,
+        syncState: any SyncStateStore,
         zoho: ZohoBooksClient<ZohoOAuth>,
         matcher: ReceiptMatcher = ReceiptMatcher()
     ) {
@@ -66,6 +68,7 @@ public actor ReceiptPipeline {
         self.driveFolder = driveFolder
         self.parser = parser
         self.store = store
+        self.syncState = syncState
         self.zoho = zoho
         self.matcher = matcher
     }
@@ -131,7 +134,7 @@ public actor ReceiptPipeline {
 
         // Overlap the window slightly so boundary messages can't be missed;
         // dedupe below handles the overlap.
-        let lastSync = await store.lastSync(mailbox: mailbox)
+        let lastSync = syncState.lastSync(mailbox: mailbox)
         let windowStart = since ?? lastSync?.addingTimeInterval(-24 * 3600)
 
         let messages = try await graph.fetchInboxMessages(since: windowStart)
@@ -180,7 +183,7 @@ public actor ReceiptPipeline {
         }
 
         if !dryRun {
-            await store.setLastSync(mailbox: mailbox, date: Date())
+            syncState.setLastSync(mailbox: mailbox, date: Date())
         }
         return summary
     }

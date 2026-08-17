@@ -26,8 +26,9 @@ graph.dot
 .build/
 Package.resolved
 
-# Config
+# Config (real credentials) and machine-local sync state — repo-rooted, never committed
 config.json
+state.json
 
 # macOS
 .DS_Store

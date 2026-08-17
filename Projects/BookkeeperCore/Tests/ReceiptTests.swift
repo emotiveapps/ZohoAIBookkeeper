@@ -234,17 +234,24 @@ struct ReceiptStoreTests {
         #expect(reloaded?.attachedToZoho == true)
     }
 
-    @Test("Sync state round-trips per mailbox")
+    @Test("File-backed sync state round-trips per mailbox")
     func syncState() async throws {
-        let (store, dir) = try makeStore()
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("sync-state-tests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
 
-        #expect(await store.lastSync(mailbox: "a@x.com") == nil)
+        let state = FileSyncState(url: dir.appendingPathComponent("state.json"))
+        #expect(state.lastSync(mailbox: "a@x.com") == nil)
         let now = Date()
-        await store.setLastSync(mailbox: "a@x.com", date: now)
-        let loaded = await store.lastSync(mailbox: "a@x.com")
+        state.setLastSync(mailbox: "a@x.com", date: now)
+        let loaded = state.lastSync(mailbox: "a@x.com")
         #expect(abs((loaded?.timeIntervalSince(now)) ?? 999) < 1)
-        #expect(await store.lastSync(mailbox: "b@x.com") == nil)
+        #expect(state.lastSync(mailbox: "b@x.com") == nil)
+
+        // A second instance pointed at the same file sees the persisted value.
+        let reopened = FileSyncState(url: dir.appendingPathComponent("state.json"))
+        #expect(reopened.lastSync(mailbox: "a@x.com") != nil)
     }
 
     @Test("Filename slugs are filesystem-safe")

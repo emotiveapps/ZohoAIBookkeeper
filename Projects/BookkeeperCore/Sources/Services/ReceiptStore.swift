@@ -1,5 +1,77 @@
 import Foundation
 
+// MARK: - Sync state
+
+/// Where receipt-sync bookkeeping (last-sync timestamps) lives — deliberately
+/// separate from the receipt archive, which holds only audit data.
+public protocol SyncStateStore: Sendable {
+    func lastSync(mailbox: String) -> Date?
+    func setLastSync(mailbox: String, date: Date)
+}
+
+/// iPhone/iPad: UserDefaults behind a predefined, namespaced key set. All keys
+/// live in one place so the app's defaults surface stays auditable.
+public struct UserDefaultsSyncState: SyncStateStore {
+    /// Every UserDefaults key this wrapper may touch.
+    private enum Key {
+        static let lastSyncPrefix = "receipts.lastSync."
+
+        static func lastSync(mailbox: String) -> String {
+            lastSyncPrefix + mailbox.lowercased()
+        }
+    }
+
+    public init() {}
+
+    public func lastSync(mailbox: String) -> Date? {
+        UserDefaults.standard.object(forKey: Key.lastSync(mailbox: mailbox)) as? Date
+    }
+
+    public func setLastSync(mailbox: String, date: Date) {
+        UserDefaults.standard.set(date, forKey: Key.lastSync(mailbox: mailbox))
+    }
+}
+
+/// CLI: a small JSON file kept next to config.json in the repo (gitignored) —
+/// operational state lives with the machine's working copy, never in the
+/// audit archive and never in a hidden home folder.
+public struct FileSyncState: SyncStateStore {
+    private struct State: Codable {
+        var lastSyncByMailbox: [String: Date] = [:]
+    }
+
+    private let url: URL
+
+    public init(url: URL) {
+        self.url = url
+    }
+
+    public func lastSync(mailbox: String) -> Date? {
+        load().lastSyncByMailbox[mailbox]
+    }
+
+    public func setLastSync(mailbox: String, date: Date) {
+        var state = load()
+        state.lastSyncByMailbox[mailbox] = date
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        if let data = try? encoder.encode(state) {
+            try? data.write(to: url)
+        }
+    }
+
+    private func load() -> State {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let data = try? Data(contentsOf: url),
+              let state = try? decoder.decode(State.self, from: data) else {
+            return State()
+        }
+        return state
+    }
+}
+
 /// The local receipt filing cabinet: original files plus JSON sidecars under
 /// `<root>/<year>/`. This archive is the durable audit trail (IRS retention),
 /// independent of what's attached in Zoho.
@@ -113,39 +185,7 @@ public actor ReceiptStore {
         }
     }
 
-    // MARK: - Sync state
-
-    public func lastSync(mailbox: String) -> Date? {
-        loadState().lastSyncByMailbox[mailbox]
-    }
-
-    public func setLastSync(mailbox: String, date: Date) {
-        var state = loadState()
-        state.lastSyncByMailbox[mailbox] = date
-        saveState(state)
-    }
-
     // MARK: - Private
-
-    private struct State: Codable {
-        var lastSyncByMailbox: [String: Date] = [:]
-    }
-
-    private var stateURL: URL { root.appendingPathComponent("state.json") }
-
-    private func loadState() -> State {
-        guard let data = try? Data(contentsOf: stateURL),
-              let state = try? Self.decoder.decode(State.self, from: data) else {
-            return State()
-        }
-        return state
-    }
-
-    private func saveState(_ state: State) {
-        if let data = try? Self.encoder.encode(state) {
-            try? data.write(to: stateURL)
-        }
-    }
 
     private func write(_ record: ReceiptRecord) throws {
         let sidecarURL = root.appendingPathComponent(record.relativePath + ".json")

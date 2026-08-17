@@ -32,6 +32,14 @@ struct Receipts: AsyncParsableCommand {
         return try ReceiptStore(root: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
     }
 
+    /// Sync bookkeeping lives in state.json next to config.json (repo root,
+    /// gitignored) — operational state, not audit data.
+    static func syncState() throws -> FileSyncState {
+        try FileSyncState(
+            url: ConfigLoader.configURL().deletingLastPathComponent().appendingPathComponent("state.json")
+        )
+    }
+
     // MARK: - Login
 
     struct Login: AsyncParsableCommand {
@@ -105,6 +113,7 @@ struct Receipts: AsyncParsableCommand {
                     driveFolder: onedrive?.folderPath,
                     parser: parser,
                     store: store,
+                    syncState: try Receipts.syncState(),
                     zoho: zoho
                 )
                 lastPipeline = pipeline
@@ -123,6 +132,7 @@ struct Receipts: AsyncParsableCommand {
                     driveFolder: onedrive.folderPath,
                     parser: parser,
                     store: store,
+                    syncState: try Receipts.syncState(),
                     zoho: zoho
                 )
                 lastPipeline = pipeline
@@ -242,6 +252,7 @@ struct Receipts: AsyncParsableCommand {
                 driveFolder: config.receipts?.onedrive?.folderPath,
                 parser: ReceiptParser(apiKey: config.anthropic.apiKey),
                 store: store,
+                syncState: try Receipts.syncState(),
                 zoho: zoho
             )
             try await pipeline.attach(record: record, expenseId: expense)

@@ -15,6 +15,13 @@ import Foundation
 /// The iOS app stores credentials in the Keychain and never touches this loader.
 public enum ConfigLoader {
     public static func load() throws -> FullConfiguration {
+        let data = try Data(contentsOf: configURL())
+        return try parse(data)
+    }
+
+    /// The resolved config.json location. Machine-local operational files
+    /// (e.g. the CLI's sync state.json) live next to it in the repo.
+    public static func configURL() throws -> URL {
         let candidates = candidatePaths()
         guard let url = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
             let searched = candidates.map(\.path).joined(separator: "\n  ")
@@ -22,9 +29,7 @@ public enum ConfigLoader {
                 "config.json not found. Searched:\n  \(searched)\nCopy config.example.json there and fill in your credentials."
             )
         }
-
-        let data = try Data(contentsOf: url)
-        return try parse(data)
+        return url
     }
 
     /// Decode a `config.json`-format payload (snake_case keys). Shared by the CLI's

@@ -144,6 +144,7 @@ public final class Workspace {
                 driveFolder: configuration.receipts?.onedrive?.folderPath,
                 parser: ReceiptParser(apiKey: configuration.anthropic.apiKey),
                 store: store,
+                syncState: UserDefaultsSyncState(),
                 zoho: client
             )
         } catch {
