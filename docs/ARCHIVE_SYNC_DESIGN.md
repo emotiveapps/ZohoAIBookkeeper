@@ -1,6 +1,6 @@
 # Receipt Archive Sync — architecture proposal
 
-**Status: draft for owner review — not yet built.**
+**Status: approved and built (Aug 17, 2026).** Implementation: `GraphDriveSyncEngine` in BookkeeperCore; wiring in `Receipts.store(for:)` (CLI) and `Workspace` (app).
 
 ## Goal
 

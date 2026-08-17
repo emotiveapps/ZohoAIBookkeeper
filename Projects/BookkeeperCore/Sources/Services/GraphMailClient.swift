@@ -379,6 +379,40 @@ public actor GraphMailClient {
         public let relativePath: String
         public let size: Int
         public let lastModified: Date?
+        /// Change tag — differs whenever content or metadata changes.
+        public let eTag: String?
+
+        public init(
+            id: String, name: String, relativePath: String,
+            size: Int, lastModified: Date?, eTag: String? = nil
+        ) {
+            self.id = id
+            self.name = name
+            self.relativePath = relativePath
+            self.size = size
+            self.lastModified = lastModified
+            self.eTag = eTag
+        }
+    }
+
+    /// One entry from a drive delta response. `parentPath` is the raw Graph
+    /// parentReference path (e.g. "/drive/root:/03_Finance/…").
+    public struct DeltaItem: Sendable {
+        public let id: String
+        public let name: String
+        public let parentPath: String?
+        public let isFolder: Bool
+        public let isDeleted: Bool
+        public let size: Int
+        public let lastModified: Date?
+        public let eTag: String?
+    }
+
+    public struct DeltaPage: Sendable {
+        public let items: [DeltaItem]
+        /// Token to persist for the next incremental pull (present when the
+        /// enumeration is complete).
+        public let nextToken: String?
     }
 
     /// All files under `folderPath` (recursively), excluding the given
@@ -394,7 +428,7 @@ public actor GraphMailClient {
 
         while let (folderId, prefix) = pending.popLast() {
             var next: String? = "https://graph.microsoft.com/v1.0/me/drive/items/\(folderId)/children"
-                + "?$select=id,name,size,folder,file,lastModifiedDateTime&$top=200"
+                + "?$select=id,name,size,folder,file,lastModifiedDateTime,eTag&$top=200"
             while let page = next {
                 let data = try await get(url: page)
                 struct Page: Decodable {
@@ -414,6 +448,7 @@ public actor GraphMailClient {
                     let folder: Folder?
                     let file: File?
                     let lastModifiedDateTime: String?
+                    let eTag: String?
                 }
                 let decoded = try JSONDecoder().decode(Page.self, from: data)
                 for item in decoded.value {
@@ -428,7 +463,8 @@ public actor GraphMailClient {
                             name: item.name,
                             relativePath: prefix.isEmpty ? item.name : "\(prefix)/\(item.name)",
                             size: item.size ?? 0,
-                            lastModified: item.lastModifiedDateTime.flatMap { Self.isoFormatter.date(from: $0) }
+                            lastModified: item.lastModifiedDateTime.flatMap { Self.isoFormatter.date(from: $0) },
+                            eTag: item.eTag
                         ))
                     }
                 }
@@ -468,6 +504,115 @@ public actor GraphMailClient {
             method: "PATCH",
             bodyData: try JSONSerialization.data(withJSONObject: body)
         )
+    }
+
+    public struct UploadedItem: Sendable {
+        public let id: String
+        public let eTag: String?
+    }
+
+    public enum DriveConflictBehavior: String, Sendable {
+        case fail, replace, rename
+    }
+
+    /// Create or replace a file at `path` (drive-root-relative) with a single
+    /// PUT. Graph's simple-upload limit is 4 MB; callers with larger payloads
+    /// must not use this (receipts are far below it, enforced here).
+    public func uploadDriveItem(
+        path: String,
+        data: Data,
+        conflictBehavior: DriveConflictBehavior,
+        ifMatch: String? = nil
+    ) async throws -> UploadedItem {
+        guard data.count < 4_000_000 else {
+            throw GraphError.requestFailed(status: 413, body: "File exceeds the 4 MB simple-upload limit")
+        }
+        let url = "https://graph.microsoft.com/v1.0/me/drive/root:/\(encodePath(path)):/content"
+            + "?@microsoft.graph.conflictBehavior=\(conflictBehavior.rawValue)"
+        var headers: [String: String] = [:]
+        if let ifMatch { headers["If-Match"] = ifMatch }
+        let response = try await send(
+            url: url, method: "PUT", bodyData: data,
+            contentType: "application/octet-stream", extraHeaders: headers
+        )
+        struct Item: Decodable {
+            let id: String
+            let eTag: String?
+        }
+        let item = try JSONDecoder().decode(Item.self, from: response)
+        return UploadedItem(id: item.id, eTag: item.eTag)
+    }
+
+    /// Walk the drive delta stream to completion. Pass a stored token for
+    /// incremental changes, `"latest"` to establish a baseline without
+    /// enumerating, or nil for a full enumeration of the drive.
+    /// OneDrive for Business only supports delta on the drive *root*, so
+    /// callers filter results by `parentPath` themselves. A 410 response
+    /// means the token expired — fall back to a listing and re-baseline.
+    public func driveDelta(token: String?) async throws -> DeltaPage {
+        var url = "https://graph.microsoft.com/v1.0/me/drive/root/delta"
+            + "?$select=id,name,size,folder,file,deleted,parentReference,lastModifiedDateTime,eTag&$top=200"
+        if let token {
+            let escaped = token.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? token
+            url += "&token=\(escaped)"
+        }
+
+        var items: [DeltaItem] = []
+        var deltaToken: String?
+        var next: String? = url
+        while let page = next {
+            let data = try await get(url: page)
+            struct Page: Decodable {
+                let value: [Item]
+                let nextLink: String?
+                let deltaLink: String?
+                enum CodingKeys: String, CodingKey {
+                    case value
+                    case nextLink = "@odata.nextLink"
+                    case deltaLink = "@odata.deltaLink"
+                }
+            }
+            struct Item: Decodable {
+                struct Folder: Decodable {}
+                struct Deleted: Decodable {}
+                struct Parent: Decodable { let path: String? }
+                let id: String
+                let name: String?
+                let size: Int?
+                let folder: Folder?
+                let deleted: Deleted?
+                let parentReference: Parent?
+                let lastModifiedDateTime: String?
+                let eTag: String?
+            }
+            let decoded = try JSONDecoder().decode(Page.self, from: data)
+            items += decoded.value.map { item in
+                DeltaItem(
+                    id: item.id,
+                    name: item.name ?? "",
+                    parentPath: item.parentReference?.path,
+                    isFolder: item.folder != nil,
+                    isDeleted: item.deleted != nil,
+                    size: item.size ?? 0,
+                    lastModified: item.lastModifiedDateTime.flatMap { Self.isoFormatter.date(from: $0) },
+                    eTag: item.eTag
+                )
+            }
+            if let deltaLink = decoded.deltaLink {
+                deltaToken = Self.token(fromDeltaLink: deltaLink)
+            }
+            next = decoded.nextLink
+        }
+        return DeltaPage(items: items, nextToken: deltaToken)
+    }
+
+    /// A token representing "now", without enumerating the drive.
+    public func driveDeltaBaseline() async throws -> String? {
+        try await driveDelta(token: "latest").nextToken
+    }
+
+    static func token(fromDeltaLink link: String) -> String? {
+        URLComponents(string: link)?.queryItems?.first { $0.name == "token" }?.value
     }
 
     /// Resolve a path in the signed-in user's OneDrive to a folder ID.
@@ -586,7 +731,13 @@ public actor GraphMailClient {
         try await send(url: url, method: "POST", bodyData: try JSONEncoder().encode(body))
     }
 
-    private func send(url: String, method: String, bodyData: Data?) async throws -> Data {
+    private func send(
+        url: String,
+        method: String,
+        bodyData: Data?,
+        contentType: String = "application/json",
+        extraHeaders: [String: String] = [:]
+    ) async throws -> Data {
         guard let requestURL = URL(string: url) else { throw GraphError.invalidResponse }
         let token = try await validAccessToken()
         var request = URLRequest(url: requestURL)
@@ -595,8 +746,11 @@ public actor GraphMailClient {
         // Immutable IDs survive folder moves, so stored message IDs stay valid
         // after we file messages into state folders.
         request.setValue("IdType=\"ImmutableId\"", forHTTPHeaderField: "Prefer")
+        for (name, value) in extraHeaders {
+            request.setValue(value, forHTTPHeaderField: name)
+        }
         if let bodyData {
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
             request.httpBody = bodyData
         }
         let (data, response) = try await URLSession.shared.data(for: request)

@@ -54,6 +54,7 @@ final class ReceiptsModel {
                 statusLine = "Couldn't process \(item.originalName): \(error.localizedDescription)"
             }
         }
+        await workspace.pushReceiptArchive()
         await refresh()
     }
 
@@ -69,6 +70,7 @@ final class ReceiptsModel {
         } catch {
             statusLine = error.localizedDescription
         }
+        await workspace.pushReceiptArchive()
         await refresh()
     }
 
@@ -80,6 +82,7 @@ final class ReceiptsModel {
         } catch {
             statusLine = error.localizedDescription
         }
+        await workspace.pushReceiptArchive()
         await refresh()
     }
 

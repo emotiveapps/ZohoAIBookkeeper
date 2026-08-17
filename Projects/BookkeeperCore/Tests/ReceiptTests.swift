@@ -261,6 +261,86 @@ struct ReceiptStoreTests {
     }
 }
 
+@Suite("GraphDriveSyncEngine")
+struct GraphDriveSyncEngineTests {
+
+    @Test("Delta items map to folder-relative paths; outsiders are excluded")
+    func relativePathMapping() {
+        let folder = "03_Finance/ZohoAIBookkeeper/Receipts Archive"
+        #expect(
+            GraphDriveSyncEngine.relativePath(
+                parentPath: "/drive/root:/03_Finance/ZohoAIBookkeeper/Receipts Archive",
+                name: "a.pdf", under: folder
+            ) == "a.pdf"
+        )
+        #expect(
+            GraphDriveSyncEngine.relativePath(
+                parentPath: "/drives/b!xyz/root:/03_Finance/ZohoAIBookkeeper/Receipts Archive/2025",
+                name: "a.pdf", under: folder
+            ) == "2025/a.pdf"
+        )
+        // Percent-encoded parent paths decode before comparison.
+        #expect(
+            GraphDriveSyncEngine.relativePath(
+                parentPath: "/drive/root:/03_Finance/ZohoAIBookkeeper/Receipts%20Archive/2025",
+                name: "a.pdf", under: folder
+            ) == "2025/a.pdf"
+        )
+        // Outside the synced folder, or a sibling with the folder as prefix.
+        #expect(
+            GraphDriveSyncEngine.relativePath(
+                parentPath: "/drive/root:/03_Finance/Receipts", name: "a.pdf", under: folder
+            ) == nil
+        )
+        #expect(
+            GraphDriveSyncEngine.relativePath(
+                parentPath: "/drive/root:/03_Finance/ZohoAIBookkeeper/Receipts Archive Old",
+                name: "a.pdf", under: folder
+            ) == nil
+        )
+        #expect(GraphDriveSyncEngine.relativePath(parentPath: nil, name: "a.pdf", under: folder) == nil)
+    }
+
+    @Test("Delta tokens are extracted from deltaLink URLs")
+    func deltaTokenExtraction() {
+        let link = "https://graph.microsoft.com/v1.0/me/drive/root/delta?token=aTokenValue123"
+        #expect(GraphMailClient.token(fromDeltaLink: link) == "aTokenValue123")
+        #expect(GraphMailClient.token(fromDeltaLink: "https://example.com/no-token") == nil)
+    }
+
+    @Test("Staging overlays cache in local file listings")
+    func stagingOverlay() async throws {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("engine-tests-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: base) }
+
+        let engine = try GraphDriveSyncEngine(
+            graph: GraphMailClient(config: GraphMailboxConfig(tenantId: "t", clientId: "c", address: "a@x.com")),
+            folderPath: "Test/Folder",
+            cacheRoot: base.appendingPathComponent("cache"),
+            stagingRoot: base.appendingPathComponent("staging"),
+            syncState: FileSyncState(url: base.appendingPathComponent("state.json"))
+        )
+
+        // Cache copy, then a staged rewrite of the same relative path.
+        try FileManager.default.createDirectory(
+            at: base.appendingPathComponent("cache/2025"), withIntermediateDirectories: true
+        )
+        try Data("cached".utf8).write(to: base.appendingPathComponent("cache/2025/a.pdf.json"))
+        try await engine.stage(relativePath: "2025/a.pdf.json", data: Data("staged".utf8))
+
+        let files = await engine.localFiles(withSuffix: ".json")
+        #expect(files.count == 1)
+        let data = try Data(contentsOf: files["2025/a.pdf.json"]!)
+        #expect(String(data: data, encoding: .utf8) == "staged")
+
+        // fileData prefers staging too, and index.json is never listed.
+        let read = try await engine.fileData(at: "2025/a.pdf.json")
+        #expect(String(data: read, encoding: .utf8) == "staged")
+        #expect(await engine.pendingUploads() == ["2025/a.pdf.json"])
+    }
+}
+
 @Suite("Mailbox filing")
 struct MailboxFilingTests {
 

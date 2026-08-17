@@ -19,17 +19,27 @@ struct Receipts: AsyncParsableCommand {
         return mailboxes
     }
 
-    /// The durable receipt archive at `receipts.archive_path` — required:
-    /// audit data belongs in a visible, backed-up folder of the owner's
-    /// choosing, and there is deliberately no hidden default location.
+    /// The receipt archive: cloud-canonical in OneDrive
+    /// (`receipts.archive_folder_path`), synced through a
+    /// `GraphDriveSyncEngine` with the local cache in `~/Library/Caches` and
+    /// pending uploads staged in `~/Library/Application Support`.
     static func store(for config: FullConfiguration) throws -> ReceiptStore {
-        guard let path = config.receipts?.archivePath, !path.isEmpty else {
+        guard let receipts = config.receipts, let mailbox = receipts.mailboxes.first else {
             throw ValidationError(
-                "receipts.archive_path is not set in config.json. Point it at your receipt archive "
-                    + "(a visible, backed-up folder — NOT inside the swept OneDrive receipts folder)."
+                "The receipt archive is cloud-canonical and needs a \"receipts\" section "
+                    + "(Microsoft sign-in) in config.json."
             )
         }
-        return try ReceiptStore(root: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let engine = try GraphDriveSyncEngine(
+            graph: GraphMailClient(config: mailbox),
+            folderPath: receipts.resolvedArchiveFolderPath,
+            cacheRoot: caches.appendingPathComponent("com.emotiveapps.ZohoBookkeeper/ReceiptsArchive"),
+            stagingRoot: support.appendingPathComponent("com.emotiveapps.ZohoBookkeeper/ArchiveStaging"),
+            syncState: try syncState()
+        )
+        return ReceiptStore(engine: engine)
     }
 
     /// Sync bookkeeping lives in state.json next to config.json (repo root,
@@ -91,6 +101,14 @@ struct Receipts: AsyncParsableCommand {
             let parser = ReceiptParser(apiKey: config.anthropic.apiKey)
             let store = try Receipts.store(for: config)
 
+            // Cloud-canonical archive: pull other devices' work first so
+            // matching and dedupe see it; push local changes at the end.
+            if let engine = await store.syncEngine {
+                let report = try await engine.pull()
+                print("\(Terminal.dim)archive pull: \(report.downloaded) downloaded\(Terminal.reset)")
+                for warning in report.warnings { print("  \(Terminal.brightYellow)\(warning)\(Terminal.reset)") }
+            }
+
             let sinceDate: Date?
             if let since {
                 guard let parsed = GapDetector.parseDate(since) else {
@@ -146,7 +164,13 @@ struct Receipts: AsyncParsableCommand {
                 printSummary(summary, scanned: "receipt(s)")
             }
 
-            print("\nArchive: \(store.rootURL.path)")
+            if let engine = await store.syncEngine {
+                let report = try await engine.push()
+                print("\n\(Terminal.dim)archive push: \(report.uploaded) uploaded\(Terminal.reset)")
+                for warning in report.warnings { print("  \(Terminal.brightYellow)\(warning)\(Terminal.reset)") }
+            }
+
+            print("\nArchive cache: \(store.rootURL.path)")
         }
 
         private func printSummary(_ summary: ReceiptPipeline.SyncSummary, scanned: String) {
@@ -256,6 +280,9 @@ struct Receipts: AsyncParsableCommand {
                 zoho: zoho
             )
             try await pipeline.attach(record: record, expenseId: expense)
+            if let engine = await store.syncEngine {
+                _ = try await engine.push()
+            }
 
             print("\(Terminal.brightGreen)✓\(Terminal.reset) Attached \(record.parsed?.vendor ?? record.id) to \(detail.vendorName ?? "expense") (\(detail.date ?? "")) \(TaxReadinessReportFormatter.money(detail.total ?? detail.amount ?? 0))")
         }

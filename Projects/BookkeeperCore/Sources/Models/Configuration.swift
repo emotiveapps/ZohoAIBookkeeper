@@ -132,21 +132,24 @@ public struct ReceiptsConfig: Codable, Sendable {
     public let mailboxes: [GraphMailboxConfig]
     /// Optional OneDrive folder swept for receipt files alongside the mailboxes.
     public let onedrive: OneDriveConfig?
-    /// Where the durable receipt archive lives (macOS CLI only). This is
-    /// IRS-retention audit data — point it somewhere visible and backed up
-    /// (e.g. a synced OneDrive finance folder), NOT a hidden dotfolder, and
-    /// NOT inside the swept `onedrive.folderPath` (the sweep would reprocess
-    /// it). Unset falls back to the legacy `~/.zoho-ai-bookkeeper/receipts`.
-    public let archivePath: String?
+    /// OneDrive folder (drive-root-relative) holding the canonical receipt
+    /// archive, synced via `GraphDriveSyncEngine` (cloud-canonical, local
+    /// cache + staging). Must NOT sit inside the swept `onedrive.folderPath`
+    /// (the sweep would reprocess it).
+    public let archiveFolderPath: String?
+
+    public var resolvedArchiveFolderPath: String {
+        archiveFolderPath ?? "03_Finance/ZohoAIBookkeeper/Receipts Archive"
+    }
 
     public init(
         mailboxes: [GraphMailboxConfig],
         onedrive: OneDriveConfig? = nil,
-        archivePath: String? = nil
+        archiveFolderPath: String? = nil
     ) {
         self.mailboxes = mailboxes
         self.onedrive = onedrive
-        self.archivePath = archivePath
+        self.archiveFolderPath = archiveFolderPath
     }
 }
 

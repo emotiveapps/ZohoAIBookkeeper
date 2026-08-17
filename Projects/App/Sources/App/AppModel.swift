@@ -134,7 +134,25 @@ public final class Workspace {
         self.graphMail = graphMail
 
         do {
-            let store = try ReceiptStore()
+            let store: ReceiptStore
+            if let graphMail, let receipts = configuration.receipts {
+                // Cloud-canonical archive: purgeable cache in Caches,
+                // pending uploads staged in Application Support.
+                let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+                let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                let engine = try GraphDriveSyncEngine(
+                    graph: graphMail,
+                    folderPath: receipts.resolvedArchiveFolderPath,
+                    cacheRoot: caches.appendingPathComponent("ReceiptsArchive"),
+                    stagingRoot: support.appendingPathComponent("ArchiveStaging"),
+                    syncState: UserDefaultsSyncState()
+                )
+                store = ReceiptStore(engine: engine)
+            } else {
+                // No Microsoft config: local-only archive in Documents.
+                let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                store = try ReceiptStore(root: documents.appendingPathComponent("Receipts"))
+            }
             self.receiptStore = store
             // With a Microsoft sign-in on this device the pipeline can sweep
             // the mailbox and OneDrive folder; without one it still processes
@@ -152,6 +170,13 @@ public final class Workspace {
             self.receiptStore = nil
             self.receiptPipeline = nil
         }
+    }
+
+    /// Best-effort push of locally staged archive files to OneDrive (called
+    /// after ingests/attaches; failures stay staged and retry next sync).
+    public func pushReceiptArchive() async {
+        guard let engine = await receiptStore?.syncEngine else { return }
+        _ = try? await engine.push()
     }
 
     public static func connect(configuration: FullConfiguration) async -> Workspace {
@@ -309,6 +334,15 @@ public final class Workspace {
         var sharedProcessed = 0
         var errors: [String] = []
 
+        // Cloud-canonical archive: pull other devices' work first.
+        if let engine = await receiptStore?.syncEngine {
+            do {
+                _ = try await engine.pull()
+            } catch {
+                errors.append("archive pull: \(error.localizedDescription)")
+            }
+        }
+
         for item in ShareInbox.pendingItems() {
             do {
                 let data = try Data(contentsOf: item.fileURL)
@@ -358,10 +392,22 @@ public final class Workspace {
             errors.append(error.localizedDescription)
         }
 
+        var archived = 0
+        if let engine = await receiptStore?.syncEngine {
+            do {
+                let report = try await engine.push()
+                archived = report.uploaded
+                errors.append(contentsOf: report.warnings)
+            } catch {
+                errors.append("archive push: \(error.localizedDescription)")
+            }
+        }
+
         var parts: [String] = []
         if sharedProcessed > 0 { parts.append("\(sharedProcessed) shared file(s) processed") }
         if let mailReceipts { parts.append("\(mailReceipts) new from mail") }
         if let driveReceipts { parts.append("\(driveReceipts) new from OneDrive") }
+        if archived > 0 { parts.append("\(archived) archived to OneDrive") }
         parts.append(retried > 0 ? "\(retried) pending receipt(s) matched" : "no new matches")
         if !errors.isEmpty { parts.append("\(errors.count) error(s)") }
         let line = parts.joined(separator: " · ")

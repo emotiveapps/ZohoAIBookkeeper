@@ -21,7 +21,7 @@
     "onedrive": {
       "folder_path": "03_Finance/Receipts"
     },
-    "archive_path": "/path/to/backed-up/Receipts Archive"
+    "archive_folder_path": "03_Finance/ZohoAIBookkeeper/Receipts Archive"
   },
   "category_mapping": {
     "categories": [

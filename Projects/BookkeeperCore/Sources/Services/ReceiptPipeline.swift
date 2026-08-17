@@ -114,6 +114,12 @@ public actor ReceiptPipeline {
                 if try await rematch(record, dryRun: dryRun, summary: &summary) {
                     summary.retriedMatches += 1
                 }
+            } catch HttpServiceError.rateLimited {
+                // Zoho quota exhausted: every further record would fail the
+                // same way after long 429 waits — stop and resume next sync.
+                summary.errors += 1
+                summary.lines.append("Zoho rate limited — retry pass stopped; pendings resume next sync")
+                break
             } catch {
                 summary.errors += 1
                 summary.lines.append("error retrying \(record.parsed?.vendor ?? record.id): \(error.localizedDescription)")
