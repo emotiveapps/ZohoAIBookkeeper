@@ -6,15 +6,20 @@ public struct FullConfiguration: Codable, Sendable {
     public let zoho: ZohoConfiguration
     public let anthropic: AnthropicConfiguration
     public let categoryMapping: CategoryMappingConfig?
+    /// Receipt-ingestion mailboxes (Microsoft 365 via Graph). Optional so older
+    /// configs keep decoding.
+    public let receipts: ReceiptsConfig?
 
     public init(
         zoho: ZohoConfiguration,
         anthropic: AnthropicConfiguration,
-        categoryMapping: CategoryMappingConfig? = nil
+        categoryMapping: CategoryMappingConfig? = nil,
+        receipts: ReceiptsConfig? = nil
     ) {
         self.zoho = zoho
         self.anthropic = anthropic
         self.categoryMapping = categoryMapping
+        self.receipts = receipts
     }
 
     /// URL of a transaction in the Zoho Books web UI (used by "view on web" affordances).
@@ -118,6 +123,31 @@ public struct CategoryConfig: Codable, Sendable {
     public init(name: String, children: [String]? = nil) {
         self.name = name
         self.children = children
+    }
+}
+
+// MARK: - Receipts
+
+public struct ReceiptsConfig: Codable, Sendable {
+    public let mailboxes: [GraphMailboxConfig]
+
+    public init(mailboxes: [GraphMailboxConfig]) {
+        self.mailboxes = mailboxes
+    }
+}
+
+/// One Microsoft 365 mailbox polled for receipts, with the Entra app that
+/// grants access to it (device-code flow; no client secret).
+public struct GraphMailboxConfig: Codable, Sendable, Hashable {
+    public let tenantId: String
+    public let clientId: String
+    /// Mailbox to poll (may be a shared mailbox the signed-in user has Full Access to).
+    public let address: String
+
+    public init(tenantId: String, clientId: String, address: String) {
+        self.tenantId = tenantId
+        self.clientId = clientId
+        self.address = address
     }
 }
 

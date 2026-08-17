@@ -10,6 +10,15 @@
   "anthropic": {
     "api_key": "YOUR_ANTHROPIC_API_KEY"
   },
+  "receipts": {
+    "mailboxes": [
+      {
+        "tenant_id": "YOUR_ENTRA_TENANT_ID",
+        "client_id": "YOUR_ENTRA_APP_CLIENT_ID",
+        "address": "billing@example.com"
+      }
+    ]
+  },
   "category_mapping": {
     "categories": [
       {
