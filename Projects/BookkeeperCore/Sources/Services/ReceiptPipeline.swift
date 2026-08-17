@@ -32,6 +32,8 @@ public actor ReceiptPipeline {
     /// Nil when the pipeline only processes local files (iOS share extension) —
     /// mailbox operations are skipped in that mode.
     private let graph: GraphMailClient?
+    /// OneDrive folder path swept as a second receipts inbox (nil = disabled).
+    private let driveFolder: String?
     private let parser: ReceiptParser
     private let store: ReceiptStore
     private let zoho: ZohoBooksClient<ZohoOAuth>
@@ -42,12 +44,14 @@ public actor ReceiptPipeline {
 
     public init(
         graph: GraphMailClient? = nil,
+        driveFolder: String? = nil,
         parser: ReceiptParser,
         store: ReceiptStore,
         zoho: ZohoBooksClient<ZohoOAuth>,
         matcher: ReceiptMatcher = ReceiptMatcher()
     ) {
         self.graph = graph
+        self.driveFolder = driveFolder
         self.parser = parser
         self.store = store
         self.zoho = zoho
@@ -168,6 +172,141 @@ public actor ReceiptPipeline {
         return summary
     }
 
+    // MARK: - OneDrive folder sync
+
+    /// One sweep of the OneDrive receipts folder: every receipt-type file
+    /// outside the state subfolders is downloaded, parsed, archived, matched,
+    /// and then moved into a state subfolder (its original subpath preserved,
+    /// so "2025-Q2/x.pdf" files under "Matched/2025-Q2/x.pdf"). Non-receipt
+    /// file types (scripts, CSVs, zips) are never touched. Files are only
+    /// ever moved, never deleted — on the happy path the folder root and its
+    /// organizational subfolders end up empty.
+    public func syncDrive(dryRun: Bool = false) async throws -> SyncSummary {
+        guard let graph, let driveFolder else {
+            throw GraphError.notSignedIn(mailbox: "(no OneDrive folder configured for this pipeline)")
+        }
+        var summary = SyncSummary()
+
+        let stateNames = Set(MailFolder.allCases.map(\.rawValue))
+        let items = try await graph.listDriveFiles(
+            folderPath: driveFolder,
+            excludingTopLevelFolders: stateNames
+        )
+        summary.messagesSeen = items.count
+        let known = await store.knownMessageIds()
+
+        for item in items {
+            do {
+                guard Self.isReceiptFile(item.name) else { continue }
+
+                if known.contains(item.id) {
+                    // Ingested before but still in place (e.g. a move failed):
+                    // file it by its current status.
+                    if let record = await store.allRecords().first(where: { $0.source.messageId == item.id }) {
+                        try await fileDriveItem(item, into: folder(for: record.status), dryRun: dryRun, summary: &summary)
+                    }
+                    continue
+                }
+
+                if dryRun {
+                    summary.lines.append("would ingest: \(item.relativePath)")
+                    continue
+                }
+
+                let data = try await graph.downloadDriveItem(id: item.id)
+                let ext = (item.name as NSString).pathExtension.lowercased()
+                let parsed = try await parser.parse(
+                    fileData: data,
+                    contentType: Self.contentType(forExtension: ext),
+                    filename: item.name
+                )
+
+                guard parsed.confidence > 0 else {
+                    summary.lines.append("skip: \(item.relativePath) — not a receipt")
+                    try await fileDriveItem(item, into: .notAReceipt, dryRun: dryRun, summary: &summary)
+                    continue
+                }
+
+                var record = try await store.ingest(
+                    fileData: data,
+                    fileExtension: ext,
+                    source: ReceiptRecord.Source(
+                        kind: "onedrive",
+                        messageId: item.id,
+                        subject: item.name,
+                        receivedAt: item.lastModified,
+                        path: item.relativePath
+                    ),
+                    parsed: parsed
+                )
+                summary.newReceipts += 1
+
+                let outcome = try await matchAgainstZoho(parsed)
+                try await apply(outcome: outcome, to: &record, dryRun: dryRun, moveEmail: false, summary: &summary)
+                try await fileDriveItem(item, into: folder(for: record.status), dryRun: dryRun, summary: &summary)
+            } catch {
+                summary.errors += 1
+                summary.lines.append("error: \(item.relativePath) — \(error.localizedDescription)")
+            }
+        }
+
+        // Hold & retry, same as the mailbox sync. Promoted receipts get their
+        // source (email or drive file) refiled too.
+        for record in await store.allRecords() where record.status == .pending {
+            do {
+                if try await rematch(record, dryRun: dryRun, summary: &summary) {
+                    summary.retriedMatches += 1
+                }
+            } catch {
+                summary.errors += 1
+                summary.lines.append("error retrying \(record.parsed?.vendor ?? record.id): \(error.localizedDescription)")
+            }
+        }
+        return summary
+    }
+
+    /// File types the pipeline processes from the drive folder. Everything
+    /// else (scripts, CSVs, zips, HTML tooling output) stays where it is.
+    static func isReceiptFile(_ name: String) -> Bool {
+        let ext = (name as NSString).pathExtension.lowercased()
+        return ["pdf", "png", "jpg", "jpeg", "gif", "webp"].contains(ext)
+    }
+
+    static func contentType(forExtension ext: String) -> String {
+        switch ext {
+        case "pdf": return "application/pdf"
+        case "png": return "image/png"
+        case "jpg", "jpeg": return "image/jpeg"
+        case "gif": return "image/gif"
+        case "webp": return "image/webp"
+        default: return "application/octet-stream"
+        }
+    }
+
+    /// State destination for a drive file, preserving its original subpath:
+    /// ("Matched", "2025-Q2/x.pdf") → "Matched/2025-Q2".
+    static func driveStateSubpath(state: MailFolder, originalRelativePath: String) -> String {
+        let subdir = (originalRelativePath as NSString).deletingLastPathComponent
+        return subdir.isEmpty ? state.rawValue : "\(state.rawValue)/\(subdir)"
+    }
+
+    private func fileDriveItem(
+        _ item: GraphMailClient.DriveItem,
+        into folder: MailFolder,
+        dryRun: Bool,
+        summary: inout SyncSummary
+    ) async throws {
+        guard let graph, let driveFolder else { return }
+        let destination = Self.driveStateSubpath(state: folder, originalRelativePath: item.relativePath)
+        if dryRun {
+            summary.lines.append("would move → \(destination)/\(item.name)")
+            return
+        }
+        let folderId = try await graph.ensureDriveFolder(subPath: destination, under: driveFolder)
+        try await graph.moveDriveItem(id: item.id, toFolderId: folderId)
+        summary.movedMessages += 1
+    }
+
     /// Attach a receipt to a specific expense (manual resolution of
     /// ambiguous/pending receipts), then file its email under Matched.
     public func attach(record: ReceiptRecord, expenseId: String) async throws {
@@ -181,7 +320,7 @@ public actor ReceiptPipeline {
         updated.candidateExpenseIds = []
         try await store.update(updated)
 
-        try await moveEmailIfPossible(for: updated, into: .matched)
+        try await moveSourceIfPossible(for: updated, into: .matched)
     }
 
     /// The bytes + filename to send to Zoho. Zoho rejects .html attachments,
@@ -253,18 +392,32 @@ public actor ReceiptPipeline {
         try await fileMessage(id: message.id, into: target, dryRun: dryRun, summary: &summary)
     }
 
-    /// Move the email associated with a record, when we still know where it is.
-    /// Mailbox trouble here must never fail the bookkeeping operation itself.
-    private func moveEmailIfPossible(for record: ReceiptRecord, into folder: MailFolder) async throws {
-        guard let graph,
-              record.source.kind == "email",
-              record.source.mailbox == graph.config.address,
-              let messageId = record.source.messageId else { return }
+    /// Refile a record's source (email or OneDrive file) when we still know
+    /// where it is. Graph trouble here must never fail the bookkeeping
+    /// operation itself.
+    private func moveSourceIfPossible(for record: ReceiptRecord, into folder: MailFolder) async throws {
+        guard let graph else { return }
         do {
-            let folderId = try await graph.ensureFolder(parent: Self.folderRoot, child: folder.rawValue)
-            try await graph.moveMessage(id: messageId, toFolderId: folderId)
+            switch record.source.kind {
+            case "email":
+                guard record.source.mailbox == graph.config.address,
+                      let messageId = record.source.messageId else { return }
+                let folderId = try await graph.ensureFolder(parent: Self.folderRoot, child: folder.rawValue)
+                try await graph.moveMessage(id: messageId, toFolderId: folderId)
+
+            case "onedrive":
+                guard let driveFolder,
+                      let itemId = record.source.messageId,
+                      let originalPath = record.source.path else { return }
+                let destination = Self.driveStateSubpath(state: folder, originalRelativePath: originalPath)
+                let folderId = try await graph.ensureDriveFolder(subPath: destination, under: driveFolder)
+                try await graph.moveDriveItem(id: itemId, toFolderId: folderId)
+
+            default:
+                return
+            }
         } catch {
-            logger.warning("Receipt \(record.id.prefix(8)): couldn't move email to \(folder.rawValue): \(error.localizedDescription)")
+            logger.warning("Receipt \(record.id.prefix(8)): couldn't refile source to \(folder.rawValue): \(error.localizedDescription)")
         }
     }
 
@@ -425,7 +578,7 @@ public actor ReceiptPipeline {
             if !dryRun {
                 try await store.update(record)
                 if moveEmail {
-                    try await moveEmailIfPossible(for: record, into: .needsReview)
+                    try await moveSourceIfPossible(for: record, into: .needsReview)
                 }
             }
             summary.ambiguous += 1

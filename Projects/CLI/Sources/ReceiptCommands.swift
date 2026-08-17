@@ -80,24 +80,51 @@ struct Receipts: AsyncParsableCommand {
                 sinceDate = nil
             }
 
+            let onedrive = config.receipts?.onedrive
             for mailbox in try Receipts.mailboxes(from: config) {
                 print("\n\(Terminal.bold)\(mailbox.address)\(Terminal.reset)")
                 let graph = GraphMailClient(config: mailbox)
-                let pipeline = ReceiptPipeline(graph: graph, parser: parser, store: store, zoho: zoho)
+                let pipeline = ReceiptPipeline(
+                    graph: graph,
+                    driveFolder: onedrive?.folderPath,
+                    parser: parser,
+                    store: store,
+                    zoho: zoho
+                )
 
                 let summary = try await pipeline.sync(dryRun: dryRun, since: sinceDate)
-                for line in summary.lines {
-                    print("  \(line)")
-                }
-                print("  \(Terminal.dim)\(summary.messagesSeen) message(s) scanned, \(summary.movedMessages) filed\(Terminal.reset)")
-                var line = "  \(Terminal.brightGreen)\(summary.matched) matched\(Terminal.reset) · \(Terminal.brightYellow)\(summary.ambiguous) ambiguous\(Terminal.reset) · \(summary.pending) pending · \(summary.newReceipts) new receipt(s)"
-                if summary.errors > 0 {
-                    line += " · \(Terminal.brightRed)\(summary.errors) error(s)\(Terminal.reset)"
-                }
-                print(line)
+                printSummary(summary, scanned: "message(s)")
+            }
+
+            if let onedrive {
+                let mailboxes = try Receipts.mailboxes(from: config)
+                let auth = mailboxes.first { onedrive.tenantId == nil || $0.tenantId == onedrive.tenantId }
+                    ?? mailboxes[0]
+                print("\n\(Terminal.bold)OneDrive: \(onedrive.folderPath)\(Terminal.reset)")
+                let pipeline = ReceiptPipeline(
+                    graph: GraphMailClient(config: auth),
+                    driveFolder: onedrive.folderPath,
+                    parser: parser,
+                    store: store,
+                    zoho: zoho
+                )
+                let summary = try await pipeline.syncDrive(dryRun: dryRun)
+                printSummary(summary, scanned: "file(s)")
             }
 
             print("\nArchive: \(try ReceiptStore().rootURL.path)")
+        }
+
+        private func printSummary(_ summary: ReceiptPipeline.SyncSummary, scanned: String) {
+            for line in summary.lines {
+                print("  \(line)")
+            }
+            print("  \(Terminal.dim)\(summary.messagesSeen) \(scanned) scanned, \(summary.movedMessages) filed\(Terminal.reset)")
+            var line = "  \(Terminal.brightGreen)\(summary.matched) matched\(Terminal.reset) · \(Terminal.brightYellow)\(summary.ambiguous) ambiguous\(Terminal.reset) · \(summary.pending) pending · \(summary.newReceipts) new receipt(s)"
+            if summary.errors > 0 {
+                line += " · \(Terminal.brightRed)\(summary.errors) error(s)\(Terminal.reset)"
+            }
+            print(line)
         }
     }
 
@@ -188,6 +215,7 @@ struct Receipts: AsyncParsableCommand {
             }
             let pipeline = ReceiptPipeline(
                 graph: GraphMailClient(config: mailboxConfig),
+                driveFolder: config.receipts?.onedrive?.folderPath,
                 parser: ReceiptParser(apiKey: config.anthropic.apiKey),
                 store: store,
                 zoho: zoho

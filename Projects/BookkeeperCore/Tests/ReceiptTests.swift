@@ -257,6 +257,35 @@ struct ReceiptStoreTests {
 @Suite("Mailbox filing")
 struct MailboxFilingTests {
 
+    @Test("Only receipt-type files are processed from the drive folder")
+    func driveFileFilter() {
+        #expect(ReceiptPipeline.isReceiptFile("BambuLab - Order #10 x553 - 2025-06-06.pdf"))
+        #expect(ReceiptPipeline.isReceiptFile("IMG_2041.JPG"))
+        #expect(ReceiptPipeline.isReceiptFile("scan.png"))
+        #expect(!ReceiptPipeline.isReceiptFile("add_return_policy_info.sh"))
+        #expect(!ReceiptPipeline.isReceiptFile("orders.csv"))
+        #expect(!ReceiptPipeline.isReceiptFile("Backup before AI.zip"))
+        #expect(!ReceiptPipeline.isReceiptFile("notes.html"))
+        #expect(!ReceiptPipeline.isReceiptFile("no-extension"))
+    }
+
+    @Test("Drive state destinations preserve the original subpath")
+    func driveStateSubpath() {
+        #expect(ReceiptPipeline.driveStateSubpath(state: .matched, originalRelativePath: "x.pdf") == "Matched")
+        #expect(
+            ReceiptPipeline.driveStateSubpath(state: .matched, originalRelativePath: "2025-Q2/x.pdf")
+                == "Matched/2025-Q2"
+        )
+        #expect(
+            ReceiptPipeline.driveStateSubpath(state: .pending, originalRelativePath: "Lego Purchases, New/Order 1.pdf")
+                == "Pending/Lego Purchases, New"
+        )
+        #expect(
+            ReceiptPipeline.driveStateSubpath(state: .needsReview, originalRelativePath: "a/b/c.jpg")
+                == "Needs Review/a/b"
+        )
+    }
+
     @Test("An email's folder reflects its least-finished receipt")
     func aggregateFolder() {
         #expect(ReceiptPipeline.aggregateFolder(for: []) == .notAReceipt)

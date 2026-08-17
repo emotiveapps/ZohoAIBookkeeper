@@ -45,16 +45,21 @@ public enum ReceiptStatus: String, Codable, Sendable {
 /// (file + sidecar) is the durable audit trail, independent of Zoho.
 public struct ReceiptRecord: Codable, Sendable, Identifiable {
     public struct Source: Codable, Sendable {
-        /// "email" today; "share-extension" etc. later.
+        /// "email", "onedrive", or "share-extension".
         public var kind: String
         public var mailbox: String?
-        /// Graph message ID (immutable format), used for mailbox operations (moves).
+        /// Graph ID (immutable message ID for email, driveItem ID for OneDrive),
+        /// used for dedupe and for moves into state folders.
         public var messageId: String?
         /// RFC 822 Message-ID header — the durable dedupe key (Graph IDs can drift).
         public var internetMessageId: String?
+        /// Email subject, or original filename for file-based sources.
         public var subject: String?
         public var from: String?
         public var receivedAt: Date?
+        /// Original path relative to the swept OneDrive folder (provenance;
+        /// also decides which state subfolder the file moves into).
+        public var path: String?
 
         public init(
             kind: String,
@@ -63,7 +68,8 @@ public struct ReceiptRecord: Codable, Sendable, Identifiable {
             internetMessageId: String? = nil,
             subject: String? = nil,
             from: String? = nil,
-            receivedAt: Date? = nil
+            receivedAt: Date? = nil,
+            path: String? = nil
         ) {
             self.kind = kind
             self.mailbox = mailbox
@@ -72,6 +78,7 @@ public struct ReceiptRecord: Codable, Sendable, Identifiable {
             self.subject = subject
             self.from = from
             self.receivedAt = receivedAt
+            self.path = path
         }
     }
 

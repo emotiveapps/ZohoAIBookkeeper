@@ -124,7 +124,11 @@ public actor GraphMailClient {
 
     // ReadWrite (not just Read): filing processed emails into state folders
     // needs folder creation + message moves. The pipeline never deletes mail.
-    private static let scope = "https://graph.microsoft.com/Mail.ReadWrite.Shared offline_access"
+    // Files.ReadWrite: sweeping the signed-in user's OneDrive receipts folder
+    // (list/download + moves into state subfolders). Adding a scope requires
+    // the matching Entra delegated permission and a fresh `receipts login`.
+    private static let scope = "https://graph.microsoft.com/Mail.ReadWrite.Shared "
+        + "https://graph.microsoft.com/Files.ReadWrite offline_access"
 
     public let config: GraphMailboxConfig
     private let tokenStore: GraphTokenStore
@@ -361,6 +365,164 @@ public actor GraphMailClient {
         return try JSONDecoder().decode(Message.self, from: data).body?.content
     }
 
+    // MARK: - OneDrive
+    //
+    // Drive operations run against the *signed-in user's* OneDrive (`/me/drive`)
+    // using the same token as the mailbox — this client is really "the Graph
+    // client for one signed-in account", the mailbox is just its main job.
+
+    public struct DriveItem: Sendable {
+        /// driveItem ID — stable across renames and moves within the drive.
+        public let id: String
+        public let name: String
+        /// Path relative to the swept base folder, e.g. "2025-Q2/receipt.pdf".
+        public let relativePath: String
+        public let size: Int
+        public let lastModified: Date?
+    }
+
+    /// All files under `folderPath` (recursively), excluding the given
+    /// top-level subfolder names (the state folders processed files move into).
+    public func listDriveFiles(
+        folderPath: String,
+        excludingTopLevelFolders excluded: Set<String>
+    ) async throws -> [DriveItem] {
+        let baseId = try await driveFolderId(path: folderPath)
+        var files: [DriveItem] = []
+        // (folderId, path relative to base)
+        var pending: [(id: String, prefix: String)] = [(baseId, "")]
+
+        while let (folderId, prefix) = pending.popLast() {
+            var next: String? = "https://graph.microsoft.com/v1.0/me/drive/items/\(folderId)/children"
+                + "?$select=id,name,size,folder,file,lastModifiedDateTime&$top=200"
+            while let page = next {
+                let data = try await get(url: page)
+                struct Page: Decodable {
+                    let value: [Item]
+                    let nextLink: String?
+                    enum CodingKeys: String, CodingKey {
+                        case value
+                        case nextLink = "@odata.nextLink"
+                    }
+                }
+                struct Item: Decodable {
+                    struct Folder: Decodable {}
+                    struct File: Decodable {}
+                    let id: String
+                    let name: String
+                    let size: Int?
+                    let folder: Folder?
+                    let file: File?
+                    let lastModifiedDateTime: String?
+                }
+                let decoded = try JSONDecoder().decode(Page.self, from: data)
+                for item in decoded.value {
+                    if item.folder != nil {
+                        if prefix.isEmpty && excluded.contains(item.name) { continue }
+                        // Hidden/tooling folders (".claude" etc.) are not receipts.
+                        if item.name.hasPrefix(".") { continue }
+                        pending.append((item.id, prefix.isEmpty ? item.name : "\(prefix)/\(item.name)"))
+                    } else if item.file != nil {
+                        files.append(DriveItem(
+                            id: item.id,
+                            name: item.name,
+                            relativePath: prefix.isEmpty ? item.name : "\(prefix)/\(item.name)",
+                            size: item.size ?? 0,
+                            lastModified: item.lastModifiedDateTime.flatMap { Self.isoFormatter.date(from: $0) }
+                        ))
+                    }
+                }
+                next = decoded.nextLink
+            }
+        }
+        return files
+    }
+
+    public func downloadDriveItem(id: String) async throws -> Data {
+        try await get(url: "https://graph.microsoft.com/v1.0/me/drive/items/\(id)/content")
+    }
+
+    /// Find or create `subPath` (may be nested, e.g. "Matched/2025-Q2") under
+    /// the base folder and return its folder ID. Results are cached.
+    public func ensureDriveFolder(subPath: String, under basePath: String) async throws -> String {
+        let cacheKey = "drive:\(basePath)/\(subPath)"
+        if let cached = folderIdCache[cacheKey] { return cached }
+
+        var parentId = try await driveFolderId(path: basePath)
+        for segment in subPath.split(separator: "/").map(String.init) {
+            parentId = try await ensureDriveChild(named: segment, parentId: parentId)
+        }
+        folderIdCache[cacheKey] = parentId
+        return parentId
+    }
+
+    /// Move a drive item into a folder. Never overwrites: name collisions at
+    /// the destination are auto-renamed by Graph.
+    public func moveDriveItem(id: String, toFolderId folderId: String) async throws {
+        let body: [String: Any] = [
+            "parentReference": ["id": folderId],
+            "@microsoft.graph.conflictBehavior": "rename",
+        ]
+        _ = try await send(
+            url: "https://graph.microsoft.com/v1.0/me/drive/items/\(id)",
+            method: "PATCH",
+            bodyData: try JSONSerialization.data(withJSONObject: body)
+        )
+    }
+
+    /// Resolve a path in the signed-in user's OneDrive to a folder ID.
+    private func driveFolderId(path: String) async throws -> String {
+        let cacheKey = "drive:\(path)"
+        if let cached = folderIdCache[cacheKey] { return cached }
+        let data = try await get(
+            url: "https://graph.microsoft.com/v1.0/me/drive/root:/\(encodePath(path))"
+        )
+        struct Item: Decodable { let id: String }
+        let id = try JSONDecoder().decode(Item.self, from: data).id
+        folderIdCache[cacheKey] = id
+        return id
+    }
+
+    private func ensureDriveChild(named name: String, parentId: String) async throws -> String {
+        let listURL = "https://graph.microsoft.com/v1.0/me/drive/items/\(parentId)/children"
+            + "?$select=id,name,folder&$top=200"
+        struct Page: Decodable {
+            struct Item: Decodable {
+                struct Folder: Decodable {}
+                let id: String
+                let name: String
+                let folder: Folder?
+            }
+            let value: [Item]
+            let nextLink: String?
+            enum CodingKeys: String, CodingKey {
+                case value
+                case nextLink = "@odata.nextLink"
+            }
+        }
+        var next: String? = listURL
+        while let page = next {
+            let decoded = try JSONDecoder().decode(Page.self, from: try await get(url: page))
+            if let match = decoded.value.first(where: { $0.name == name && $0.folder != nil }) {
+                return match.id
+            }
+            next = decoded.nextLink
+        }
+
+        let body: [String: Any] = [
+            "name": name,
+            "folder": [String: String](),
+            "@microsoft.graph.conflictBehavior": "fail",
+        ]
+        let data = try await send(
+            url: "https://graph.microsoft.com/v1.0/me/drive/items/\(parentId)/children",
+            method: "POST",
+            bodyData: try JSONSerialization.data(withJSONObject: body)
+        )
+        struct Created: Decodable { let id: String }
+        return try JSONDecoder().decode(Created.self, from: data).id
+    }
+
     // MARK: - HTTP plumbing
 
     // ISO8601DateFormatter is documented thread-safe but not marked Sendable.
@@ -417,14 +579,14 @@ public actor GraphMailClient {
     }
 
     private func get(url: String) async throws -> Data {
-        try await send(url: url, method: "GET", jsonBody: nil)
+        try await send(url: url, method: "GET", bodyData: nil)
     }
 
     private func postJSON(url: String, body: [String: String]) async throws -> Data {
-        try await send(url: url, method: "POST", jsonBody: body)
+        try await send(url: url, method: "POST", bodyData: try JSONEncoder().encode(body))
     }
 
-    private func send(url: String, method: String, jsonBody: [String: String]?) async throws -> Data {
+    private func send(url: String, method: String, bodyData: Data?) async throws -> Data {
         guard let requestURL = URL(string: url) else { throw GraphError.invalidResponse }
         let token = try await validAccessToken()
         var request = URLRequest(url: requestURL)
@@ -433,9 +595,9 @@ public actor GraphMailClient {
         // Immutable IDs survive folder moves, so stored message IDs stay valid
         // after we file messages into state folders.
         request.setValue("IdType=\"ImmutableId\"", forHTTPHeaderField: "Prefer")
-        if let jsonBody {
+        if let bodyData {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(jsonBody)
+            request.httpBody = bodyData
         }
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw GraphError.invalidResponse }
