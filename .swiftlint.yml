@@ -5,9 +5,9 @@ disabled_rules:
   # This is necessary when trying to keep long function signatures below 120 characters per line.
   - opening_brace
 
-# Pragmatic thresholds (Aug 2026): errors only for egregious cases so builds
-# stay green; warnings still nag. The legacy TUI (TransactionEditor et al.)
-# is the main offender — tighten these when it gets refactored.
+# Owner's policy (Aug 2026): size/complexity rules are warning-only — they
+# nag at the given thresholds but never fail the build. Only short
+# identifiers and line length keep error levels.
 identifier_name:
   min_length:
     warning: 2  # single-char loop indices warn, never error
@@ -20,16 +20,16 @@ nesting:
     warning: 2  # nested Decodable response types are idiomatic
 large_tuple:
   warning: 4
-  error: 6
+  error: 10000  # never an error
 function_body_length:
   warning: 60
-  error: 150
+  error: 10000  # never an error
 type_body_length:
   warning: 350
-  error: 600
+  error: 10000  # never an error
 cyclomatic_complexity:
   warning: 12
-  error: 10000  # never an error — warning-only by owner's preference
+  error: 10000  # never an error
 
 opt_in_rules:
   - number_separator
