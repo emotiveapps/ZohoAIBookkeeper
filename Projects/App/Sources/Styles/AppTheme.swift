@@ -5,25 +5,29 @@ import SwiftUI
 /// Values are semantic ("success", "cardTitle"), never descriptive ("green"):
 /// views say what they mean and this file decides how it looks.
 enum AppTheme {
-    /// Semantic colors. Backed by system colors today; brand palettes swap
-    /// these values (ideally via asset-catalog colorsets for automatic
-    /// dark-mode variants) without touching any view.
+    /// Semantic colors, backed by the Lucky Frog Bricks palette
+    /// (asset-catalog colorsets with light + dark variants; values from
+    /// LF/Design's design-system survey: warm, progressive, playful).
     enum Colors {
-        /// Interactive elements and emphasis (buttons pick this up via the
-        /// app accent color; use directly where tint doesn't reach).
-        static let accent = Color.accentColor
-        /// Positive state: matched receipts, completed accounts, checkmarks.
-        static let success = Color.green
+        /// LFB orange — interactive elements and emphasis (buttons pick this
+        /// up via the app accent color; use directly where tint doesn't reach).
+        static let accent = Color("LFBPrimary")
+        /// LFB green — matched receipts, completed accounts, checkmarks.
+        static let success = Color("LFBGreen")
         /// Attention state: pending counts, finished-with-errors.
         static let warning = Color.orange
         /// Failure state: errors, broken connections, destructive hints.
         static let error = Color.red
+        /// LFB purple — aspirational highlights (tax readiness, milestones).
+        static let aspiration = Color("LFBPurple")
 
         static let textPrimary = Color.primary
         static let textSecondary = Color.secondary
 
-        /// Card surfaces on grouped screens.
-        static let card = AnyShapeStyle(.background.secondary)
+        /// Warm off-white screen background (dark: system dark surface).
+        static let background = Color("LFBBackground")
+        /// Card surfaces over `background`.
+        static let card = AnyShapeStyle(Color("LFBCard"))
     }
 
     /// Type scale. Views reference roles, not fonts.

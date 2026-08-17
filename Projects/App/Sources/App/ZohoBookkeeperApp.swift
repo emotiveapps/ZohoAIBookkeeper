@@ -9,6 +9,7 @@ struct ZohoBookkeeperApp: App {
         WindowGroup {
             RootView()
                 .environment(model)
+                .tint(AppTheme.Colors.accent)
         }
     }
 }

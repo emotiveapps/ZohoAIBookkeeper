@@ -54,7 +54,12 @@ struct HomeView: View {
                     showingReadiness = true
                 } label: {
                     HStack {
-                        Label("Tax readiness", systemImage: "checkmark.seal")
+                        Label {
+                            Text("Tax readiness")
+                        } icon: {
+                            Image(systemName: "checkmark.seal")
+                                .foregroundStyle(AppTheme.Colors.aspiration)
+                        }
                         Spacer()
                         if workspace.totalPendingCount > 0 {
                             Text("\(workspace.totalPendingCount) to review")

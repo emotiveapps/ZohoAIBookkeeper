@@ -102,6 +102,7 @@ struct ReviewView: View {
             }
             .padding()
         }
+        .background(AppTheme.Colors.background)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             actionBar(session)
