@@ -60,7 +60,7 @@ struct ReviewView: View {
                 Button("Retry") {
                     Task { await session.start() }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.primaryAction)
             }
 
         case .finished:
@@ -94,7 +94,7 @@ struct ReviewView: View {
                     if let url = session.zohoURL {
                         Link(destination: url) {
                             Label("Open in Zoho Books", systemImage: "safari")
-                                .font(.callout)
+                                .accentChip()
                         }
                     }
                 } else {
@@ -273,7 +273,7 @@ struct ReviewView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.primaryAction)
         }
         .disabled(session.draft == nil || session.isSaving || session.isPreparing)
         .padding(.horizontal)
