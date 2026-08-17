@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import ZohoBooksClient
 import BookkeeperCore
 
@@ -16,8 +17,8 @@ struct TransactionHeaderCard: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 Text(transaction.displayAmount)
-                    .font(AppTheme.Typography.amount)
-                    .foregroundStyle(isExpense ? AppTheme.Colors.error : AppTheme.Colors.success)
+                    .font(Theme.Typography.amount)
+                    .foregroundStyle(isExpense ? Theme.Colors.error : Theme.Colors.success)
                 Spacer()
                 Text(transaction.date)
                     .font(.subheadline)

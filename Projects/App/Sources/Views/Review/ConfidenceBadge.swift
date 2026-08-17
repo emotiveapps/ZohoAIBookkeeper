@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import ZohoBooksClient
 import BookkeeperCore
 
@@ -7,7 +8,7 @@ struct ConfidenceBadge: View {
     let confidence: Int
 
     private var color: Color {
-        confidence >= 80 ? AppTheme.Colors.success : confidence >= 50 ? AppTheme.Colors.warning : AppTheme.Colors.error
+        confidence >= 80 ? Theme.Colors.success : confidence >= 50 ? Theme.Colors.warning : Theme.Colors.error
     }
 
     var body: some View {

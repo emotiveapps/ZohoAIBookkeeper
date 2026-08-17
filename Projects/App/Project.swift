@@ -6,6 +6,7 @@ let project = Project.app(
     dependencies: [
         .project(target: "BookkeeperCore", path: "../BookkeeperCore"),
         .external(name: "ZohoBooksClient"),
+        .external(name: "DesignSystem"),
         .external(name: "SwiftAnthropic")
     ],
     resources: ["Resources/**"],

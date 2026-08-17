@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import BookkeeperCore
 
 /// Microsoft device-code sign-in: shows the code, opens the verification page,
@@ -18,13 +19,13 @@ struct MicrosoftSignInSheet: View {
                 if finished {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 56))
-                        .foregroundStyle(AppTheme.Colors.success)
+                        .foregroundStyle(Theme.Colors.success)
                     Text("Signed in")
                         .font(.title2.weight(.semibold))
                 } else if let errorMessage {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 44))
-                        .foregroundStyle(AppTheme.Colors.warning)
+                        .foregroundStyle(Theme.Colors.warning)
                     Text(errorMessage)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)

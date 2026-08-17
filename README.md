@@ -26,6 +26,8 @@ The iPhone/iPad app runs the same loop as a one-transaction-at-a-time review scr
   Development/experiments/
   ├── ZohoAIBookkeeper/   ← this repo
   └── ZohoBooksClient/    ← required local dependency
+  Development/LF/
+  └── DesignSystem/       ← required local dependency (shared LFB design tokens)
   ```
 
 - A Zoho Books account with API credentials (client ID/secret, OAuth tokens, organization ID)

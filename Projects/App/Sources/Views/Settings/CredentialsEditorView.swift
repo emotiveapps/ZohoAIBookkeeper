@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import BookkeeperCore
 
 /// Credential editing lives one level deep so the keys — which in practice
@@ -21,7 +22,7 @@ struct CredentialsEditorView: View {
             if let saveError {
                 Section {
                     Label(saveError, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(AppTheme.Colors.error)
+                        .foregroundStyle(Theme.Colors.error)
                         .font(.callout)
                 }
             }

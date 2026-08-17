@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import ZohoBooksClient
 import BookkeeperCore
 
@@ -34,7 +35,7 @@ struct HomeView: View {
             if let error = workspace.lastError {
                 Section {
                     Label(error, systemImage: "wifi.exclamationmark")
-                        .foregroundStyle(AppTheme.Colors.error)
+                        .foregroundStyle(Theme.Colors.error)
                         .font(.callout)
                 }
             }
@@ -58,13 +59,13 @@ struct HomeView: View {
                             Text("Tax readiness")
                         } icon: {
                             Image(systemName: "checkmark.seal")
-                                .foregroundStyle(AppTheme.Colors.aspiration)
+                                .foregroundStyle(Theme.Colors.aspiration)
                         }
                         Spacer()
                         if workspace.totalPendingCount > 0 {
                             Text("\(workspace.totalPendingCount) to review")
                                 .font(.caption)
-                                .foregroundStyle(AppTheme.Colors.warning)
+                                .foregroundStyle(Theme.Colors.warning)
                         }
                         Image(systemName: "chevron.right")
                             .font(.caption)
@@ -93,9 +94,9 @@ struct HomeView: View {
 
             Section("This device") {
                 HStack(spacing: 12) {
-                    StatTile(title: "Done", value: workspace.processedCount, tint: AppTheme.Colors.success)
-                    StatTile(title: "Skipped", value: workspace.skippedCount, tint: AppTheme.Colors.warning)
-                    StatTile(title: "Vendors", value: workspace.vendors.count, tint: AppTheme.Colors.accent)
+                    StatTile(title: "Done", value: workspace.processedCount, tint: Theme.Colors.success)
+                    StatTile(title: "Skipped", value: workspace.skippedCount, tint: Theme.Colors.warning)
+                    StatTile(title: "Vendors", value: workspace.vendors.count, tint: Theme.Colors.accent)
                 }
                 .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
                 .listRowBackground(Color.clear)

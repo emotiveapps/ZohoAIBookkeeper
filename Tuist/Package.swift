@@ -9,6 +9,7 @@ let packageSettings = PackageSettings(
         "SwiftAnthropic": .framework,
         "ArgumentParser": .framework,
         "ZohoBooksClient": .framework,
+        "DesignSystem": .framework,
     ]
 )
 #endif
@@ -17,6 +18,7 @@ let package = Package(
     name: "Dependencies",
     dependencies: [
         .package(path: "../../ZohoBooksClient"),
+        .package(path: "../../../LF/DesignSystem"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic", from: "2.1.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
     ]

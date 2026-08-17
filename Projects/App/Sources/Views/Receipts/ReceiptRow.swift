@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import Observation
 import ZohoBooksClient
 import BookkeeperCore
@@ -25,7 +26,7 @@ struct ReceiptRow: View {
             }
             if record.status == .matched {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(AppTheme.Colors.success)
+                    .foregroundStyle(Theme.Colors.success)
             }
         }
     }

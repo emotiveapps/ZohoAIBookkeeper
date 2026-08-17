@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import BookkeeperCore
 
 struct SettingsView: View {
@@ -78,7 +79,7 @@ struct SettingsView: View {
             }
             if let error = workspace.lastError {
                 Label(error, systemImage: "wifi.exclamationmark")
-                    .foregroundStyle(AppTheme.Colors.error)
+                    .foregroundStyle(Theme.Colors.error)
                     .font(.callout)
             }
         }
@@ -109,10 +110,10 @@ struct SettingsView: View {
                 ProgressView().controlSize(.small)
             case .ok:
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(AppTheme.Colors.success)
+                    .foregroundStyle(Theme.Colors.success)
             case .unavailable:
                 Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(AppTheme.Colors.error)
+                    .foregroundStyle(Theme.Colors.error)
             case .notConfigured:
                 Image(systemName: "minus.circle")
                     .foregroundStyle(.tertiary)
@@ -184,7 +185,7 @@ struct SettingsView: View {
                 failed ? "Finished with errors" : "Finished",
                 systemImage: failed ? "exclamationmark.triangle.fill" : "checkmark.circle.fill"
             )
-            .foregroundStyle(failed ? AppTheme.Colors.warning : AppTheme.Colors.success)
+            .foregroundStyle(failed ? Theme.Colors.warning : Theme.Colors.success)
             Text(line)
                 .font(.caption)
                 .foregroundStyle(.secondary)

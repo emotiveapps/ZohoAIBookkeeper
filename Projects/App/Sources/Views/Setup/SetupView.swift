@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import BookkeeperCore
 
 /// First-run onboarding: paste the CLI's config.json, or enter credentials by hand.
@@ -33,7 +34,7 @@ struct SetupView: View {
                 if let connectionError {
                     Section {
                         Label(connectionError, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(AppTheme.Colors.error)
+                            .foregroundStyle(Theme.Colors.error)
                             .font(.callout)
                     }
                 }
@@ -81,11 +82,11 @@ struct SetupView: View {
                         : "Imported",
                     systemImage: "checkmark.circle.fill"
                 )
-                .foregroundStyle(AppTheme.Colors.success)
+                .foregroundStyle(Theme.Colors.success)
                 .font(.callout)
             case .failure(let message):
                 Label(message, systemImage: "xmark.circle.fill")
-                    .foregroundStyle(AppTheme.Colors.error)
+                    .foregroundStyle(Theme.Colors.error)
                     .font(.callout)
             case nil:
                 EmptyView()

@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import ZohoBooksClient
 import BookkeeperCore
 
@@ -33,10 +34,10 @@ struct AccountRow: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(AppTheme.Colors.warning, in: Capsule())
+                    .background(Theme.Colors.warning, in: Capsule())
             } else if pendingCount == 0 {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(AppTheme.Colors.success)
+                    .foregroundStyle(Theme.Colors.success)
             }
         }
         .padding(.vertical, 2)

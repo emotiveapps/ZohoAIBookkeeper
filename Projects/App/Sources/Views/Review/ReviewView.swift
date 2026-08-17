@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import ZohoBooksClient
 import BookkeeperCore
 
@@ -102,7 +103,7 @@ struct ReviewView: View {
             }
             .padding()
         }
-        .background(AppTheme.Colors.background)
+        .background(Theme.Colors.background)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             actionBar(session)
@@ -125,7 +126,7 @@ struct ReviewView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Label("AI suggestion", systemImage: "sparkles")
-                    .font(AppTheme.Typography.cardTitle)
+                    .font(Theme.Typography.cardTitle)
                 Spacer()
                 ConfidenceBadge(confidence: draft.suggestion.confidence)
                 Button {
@@ -220,11 +221,11 @@ struct ReviewView: View {
                 Divider()
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
-                    .foregroundStyle(AppTheme.Colors.error)
+                    .foregroundStyle(Theme.Colors.error)
                     .decisionRow()
             }
         }
-        .background(AppTheme.Colors.card, in: RoundedRectangle(cornerRadius: AppTheme.Radius.medium))
+        .background(Theme.Colors.card, in: RoundedRectangle(cornerRadius: Theme.Radius.medium))
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .category:
@@ -249,7 +250,7 @@ struct ReviewView: View {
     private func actionBar(_ session: ReviewSession) -> some View {
         HStack(spacing: 12) {
             Text("\(min(session.position + 1, session.totalCount)) of \(session.totalCount)")
-                .font(AppTheme.Typography.counter)
+                .font(Theme.Typography.counter)
                 .foregroundStyle(.secondary)
                 .frame(minWidth: 56, alignment: .leading)
 

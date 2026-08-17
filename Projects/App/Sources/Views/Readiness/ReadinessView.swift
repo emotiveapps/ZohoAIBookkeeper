@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import Observation
 import ZohoBooksClient
 import BookkeeperCore
@@ -91,11 +92,11 @@ struct ReadinessView: View {
             Section {
                 if report.blockers.isEmpty {
                     Label("No blockers — FY\(String(report.year)) looks ready to file", systemImage: "checkmark.seal.fill")
-                        .foregroundStyle(AppTheme.Colors.success)
+                        .foregroundStyle(Theme.Colors.success)
                 } else {
                     ForEach(report.blockers, id: \.self) { blocker in
                         Label(blocker, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(AppTheme.Colors.error)
+                            .foregroundStyle(Theme.Colors.error)
                             .font(.callout)
                     }
                 }
@@ -115,10 +116,10 @@ struct ReadinessView: View {
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
-                                    .background(AppTheme.Colors.warning, in: Capsule())
+                                    .background(Theme.Colors.warning, in: Capsule())
                             } else {
                                 Image(systemName: "checkmark.circle")
-                                    .foregroundStyle(AppTheme.Colors.success)
+                                    .foregroundStyle(Theme.Colors.success)
                             }
                         }
                         Text("\(account.transactionCount) transactions")
@@ -127,7 +128,7 @@ struct ReadinessView: View {
                         ForEach(Array(account.gaps.findings.enumerated()), id: \.offset) { _, finding in
                             Label(finding.summary, systemImage: "wifi.exclamationmark")
                                 .font(.caption)
-                                .foregroundStyle(finding.severity == .critical ? AppTheme.Colors.error : AppTheme.Colors.warning)
+                                .foregroundStyle(finding.severity == .critical ? Theme.Colors.error : Theme.Colors.warning)
                         }
                     }
                     .padding(.vertical, 2)
@@ -149,7 +150,7 @@ struct ReadinessView: View {
                 if report.expenses.missingVendorCount > 0 {
                     Label("\(report.expenses.missingVendorCount) expenses missing a vendor", systemImage: "person.crop.circle.badge.questionmark")
                         .font(.callout)
-                        .foregroundStyle(AppTheme.Colors.warning)
+                        .foregroundStyle(Theme.Colors.warning)
                 }
             } header: {
                 Text("Expenses (\(report.expenses.count))")
