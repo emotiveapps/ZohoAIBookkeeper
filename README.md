@@ -64,7 +64,13 @@ zoho-bookkeeper list-accounts
 zoho-bookkeeper audit --year 2025 [--receipts] [--export]   # tax-readiness report; exits 2 on blockers
 zoho-bookkeeper gaps --year 2025 [--account <id>]           # bank-feed outage detection w/ sparklines
 zoho-bookkeeper cogs --year 2025 --ending-inventory 5000    # periodic COGS for inventory resale
+zoho-bookkeeper receipts login                              # one-time Microsoft 365 sign-in
+zoho-bookkeeper receipts sync                               # pull receipt emails, parse, match, attach
+zoho-bookkeeper receipts list [--status pending]            # archive overview
+zoho-bookkeeper receipts attach --id <id> --expense <id>    # resolve ambiguous matches
 ```
+
+**Receipts**: forward any receipt email to your configured Microsoft 365 mailbox and `receipts sync` parses it with Claude, archives the original + metadata under `~/.zoho-ai-bookkeeper/receipts/<year>/` (your audit filing cabinet), and attaches it to the matching Zoho expense — automatically when the match is unambiguous, held and retried when the expense hasn't hit the bank feed yet. Marketing mail is recognized and skipped. Configure mailboxes in the `receipts` section of config.json.
 
 `audit --export` writes markdown + CSVs to `./reports/<year>/` (override with `--output`; the directory is gitignored since it holds real financial data) for your accountant. Inventory purchases (e.g. LEGO bought for resale) are categorized to Inventory/COGS accounts at purchase time and deducted via COGS at year-end — the pickers and AI suggestions understand this.
 

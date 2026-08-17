@@ -1,6 +1,6 @@
 # Tax-Readiness & Audit-Protection Roadmap — ZohoAIBookkeeper
 
-> **Status (Aug 16, 2026):** Phase 0, Phase 1, and Phase 1.5 are **built and verified live** (see `audit`/`gaps`/`cogs` CLI commands and the app's Tax Readiness screen). Phases 2–4 are planned, not started. Phase 2 needs an Entra app registration (client ID) before work can begin.
+> **Status (Aug 17, 2026):** Phase 0, 1, and 1.5 are **built and verified live** (`audit`/`gaps`/`cogs` commands, app Tax Readiness screen). Phase 2's **email pipeline is built and verified live** against billing@luckyfrog.com (`receipts login|sync|list|attach`): first sync rejected 16 marketing emails and archived 2 real receipts (Bricqer invoice PDF, forwarded Home Depot order), both held pending until their expenses appear in Zoho. Still open in Phase 2: the iOS share extension, the emotiveapps.com mailbox (needs its own Entra registration), and app-side receipt review UI. Phases 3–4 not started.
 
 ## Context
 

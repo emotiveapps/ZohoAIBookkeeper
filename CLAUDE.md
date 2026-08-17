@@ -69,6 +69,12 @@ BookkeeperCore (framework; @_exported imports ZohoBooksClient)
                                     split; opt-in receipt-coverage check)
                TaxReadinessReportFormatter (markdown/CSV) + CategoryFilter
                                     (expense + inventory/COGS account sourcing)
+               GraphMailClient (Microsoft Graph device-code OAuth + shared-mailbox
+                                reading; tokens in Keychain per tenant+mailbox)
+               ReceiptParser (Claude extraction: PDF/image native, HTML stripped;
+                              Haiku default) / ReceiptMatcher (pure matching) /
+               ReceiptStore (audit archive + sidecars) / ReceiptPipeline (sync
+                             orchestration, hold & retry)
                ClaudeService (actor: prompt → JSON suggestion; parser is internal for tests)
                HistoryMatcher (actor: vendor-history overrides; VendorHistorySource
                                protocol seam — ZohoVendorHistorySource in prod, stub in tests)
@@ -106,7 +112,7 @@ Key invariants:
 - **Credit-card semantics**: on `credit_card` accounts, credits are purchases. All direction logic must go through `TransactionType.isUserExpense(isDebit:accountType:)` / `availableTypes` — never raw `isDebit`.
 - **Single write path**: every Zoho categorization goes through `TransactionCategorizer.categorize`. It throws `CategorizationError` (`accountNotFound` / `transferTargetMissing` / `typeNotCategorizable`) rather than sending empty account IDs. Callers handle `.skip` (mark skipped) and `.refund` (surface error) locally — never mark them processed.
 - **Single suggestion path**: `SuggestionPipeline.suggestion(for:...)`. Don't call `ClaudeService`/`HistoryMatcher` directly from front ends.
-- **Inventory/COGS (LEGO resale)**: inventory purchases are categorized to Inventory Asset/COGS accounts at purchase (recorded, documented, but not period expenses); deduction happens via periodic COGS (`cogs` command) at year-end. Category lists must come from `CategoryFilter.spendingCategories` so those accounts stay selectable. The tax-prep/audit-protection roadmap is `ROADMAP.md`; Phase 0 (API groundwork) and Phase 1/1.5 (audit + gaps + COGS) are built, phases 2+ (receipt pipeline via Microsoft Graph + iOS share extension, coverage reporting, business digest) are not yet.
+- **Inventory/COGS (LEGO resale)**: inventory purchases are categorized to Inventory Asset/COGS accounts at purchase (recorded, documented, but not period expenses); deduction happens via periodic COGS (`cogs` command) at year-end. Category lists must come from `CategoryFilter.spendingCategories` so those accounts stay selectable. The tax-prep/audit-protection roadmap is `ROADMAP.md`; Phase 0/1/1.5 and Phase 2's email receipt pipeline are built and live-verified. Receipts flow: `receipts sync` never writes to Zoho unless a real expense exists (hold & retry); the local archive under `~/.zoho-ai-bookkeeper/receipts/` is the durable audit trail — never delete or rewrite archived files, only sidecar statuses. Still open: iOS share extension, emotiveapps mailbox, app receipt-review UI, phases 3–4.
 - **App state**: `@MainActor @Observable` classes (Observation framework, iOS 17+), not ObservableObject. The old `ViewModels/` layer is gone — don't recreate it; screen logic lives in `ReviewSession`/`Workspace`.
 
 ## Conventions
