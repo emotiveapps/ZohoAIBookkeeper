@@ -25,6 +25,7 @@ public actor ReceiptPipeline {
         public var pending = 0
         public var retriedMatches = 0
         public var movedMessages = 0
+        public var errors = 0
         public var lines: [String] = []
     }
 
@@ -65,37 +66,49 @@ public actor ReceiptPipeline {
         let known = await store.knownMessageIds()
 
         for message in messages {
-            if known.contains(message.id) || (message.internetMessageId.map { known.contains($0) } ?? false) {
-                // Already ingested but still in the Inbox (processed before
-                // folder-filing existed): file it by its current status.
-                try await fileAlreadyIngested(message: message, dryRun: dryRun, summary: &summary)
-                continue
-            }
-
-            if let adopted = await store.adoptableRecord(
-                mailbox: mailbox, subject: message.subject, receivedAt: message.receivedAt
-            ) {
-                // Same email, drifted Graph ID: update identifiers, then file it.
-                var record = adopted
-                record.source.messageId = message.id
-                record.source.internetMessageId = message.internetMessageId
-                if !dryRun {
-                    try await store.update(record)
+            // One failing message (bad attachment, Zoho hiccup) must not
+            // abort the whole sync — record it and keep going.
+            do {
+                if known.contains(message.id) || (message.internetMessageId.map { known.contains($0) } ?? false) {
+                    // Already ingested but still in the Inbox (processed before
+                    // folder-filing existed): file it by its current status.
+                    try await fileAlreadyIngested(message: message, dryRun: dryRun, summary: &summary)
+                    continue
                 }
-                try await fileMessage(id: message.id, into: folder(for: record.status), dryRun: dryRun, summary: &summary)
-                continue
-            }
 
-            let outcome = try await ingest(message: message, dryRun: dryRun, summary: &summary)
-            summary.newReceipts += outcome.receiptsCreated
-            try await fileMessage(id: message.id, into: outcome.folder, dryRun: dryRun, summary: &summary)
+                if let adopted = await store.adoptableRecord(
+                    mailbox: mailbox, subject: message.subject, receivedAt: message.receivedAt
+                ) {
+                    // Same email, drifted Graph ID: update identifiers, then file it.
+                    var record = adopted
+                    record.source.messageId = message.id
+                    record.source.internetMessageId = message.internetMessageId
+                    if !dryRun {
+                        try await store.update(record)
+                    }
+                    try await fileMessage(id: message.id, into: folder(for: record.status), dryRun: dryRun, summary: &summary)
+                    continue
+                }
+
+                let outcome = try await ingest(message: message, dryRun: dryRun, summary: &summary)
+                summary.newReceipts += outcome.receiptsCreated
+                try await fileMessage(id: message.id, into: outcome.folder, dryRun: dryRun, summary: &summary)
+            } catch {
+                summary.errors += 1
+                summary.lines.append("error: \(message.subject) — \(error.localizedDescription)")
+            }
         }
 
         // Hold & retry: previously unmatched receipts get another look now that
         // new expenses may exist in Zoho. Successful matches promote the email.
         for record in await store.allRecords() where record.status == .pending {
-            if try await rematch(record, dryRun: dryRun, summary: &summary) {
-                summary.retriedMatches += 1
+            do {
+                if try await rematch(record, dryRun: dryRun, summary: &summary) {
+                    summary.retriedMatches += 1
+                }
+            } catch {
+                summary.errors += 1
+                summary.lines.append("error retrying \(record.parsed?.vendor ?? record.id): \(error.localizedDescription)")
             }
         }
 
@@ -108,9 +121,8 @@ public actor ReceiptPipeline {
     /// Attach a receipt to a specific expense (manual resolution of
     /// ambiguous/pending receipts), then file its email under Matched.
     public func attach(record: ReceiptRecord, expenseId: String) async throws {
-        let fileData = try await store.fileData(for: record)
-        let filename = (record.relativePath as NSString).lastPathComponent
-        try await zoho.uploadExpenseAttachment(expenseId: expenseId, fileData: fileData, filename: filename)
+        let payload = try await attachmentPayload(for: record)
+        try await zoho.uploadExpenseAttachment(expenseId: expenseId, fileData: payload.data, filename: payload.filename)
 
         var updated = record
         updated.status = .matched
@@ -120,6 +132,26 @@ public actor ReceiptPipeline {
         try await store.update(updated)
 
         try await moveEmailIfPossible(for: updated, into: .matched)
+    }
+
+    /// The bytes + filename to send to Zoho. Zoho rejects .html attachments,
+    /// so HTML-bodied receipts are rendered to a text PDF for upload; the
+    /// original .html stays untouched in the archive.
+    private func attachmentPayload(for record: ReceiptRecord) async throws -> (data: Data, filename: String) {
+        let fileData = try await store.fileData(for: record)
+        let filename = (record.relativePath as NSString).lastPathComponent
+
+        if filename.lowercased().hasSuffix(".html") {
+            let html = String(data: fileData, encoding: .utf8) ?? ""
+            let text = ReceiptParser.stripHTML(html)
+            let title = [record.parsed?.vendor, record.parsed?.date, record.source.subject]
+                .compactMap { $0 }
+                .joined(separator: " — ")
+            if let pdf = TextPDFRenderer.pdfData(text: text, title: title) {
+                return (pdf, (filename as NSString).deletingPathExtension + ".pdf")
+            }
+        }
+        return (fileData, filename)
     }
 
     // MARK: - Mailbox filing
@@ -322,9 +354,8 @@ public actor ReceiptPipeline {
                     try await attach(record: record, expenseId: expenseId)
                 } else {
                     // Email filing is handled by the caller (aggregate move).
-                    let fileData = try await store.fileData(for: record)
-                    let filename = (record.relativePath as NSString).lastPathComponent
-                    try await zoho.uploadExpenseAttachment(expenseId: expenseId, fileData: fileData, filename: filename)
+                    let payload = try await attachmentPayload(for: record)
+                    try await zoho.uploadExpenseAttachment(expenseId: expenseId, fileData: payload.data, filename: payload.filename)
                     record.status = .matched
                     record.matchedExpenseId = expenseId
                     record.attachedToZoho = true

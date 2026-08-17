@@ -89,8 +89,12 @@ struct Receipts: AsyncParsableCommand {
                 for line in summary.lines {
                     print("  \(line)")
                 }
-                print("  \(Terminal.dim)\(summary.messagesSeen) message(s) scanned\(Terminal.reset)")
-                print("  \(Terminal.brightGreen)\(summary.matched) matched\(Terminal.reset) · \(Terminal.brightYellow)\(summary.ambiguous) ambiguous\(Terminal.reset) · \(summary.pending) pending · \(summary.newReceipts) new receipt(s)")
+                print("  \(Terminal.dim)\(summary.messagesSeen) message(s) scanned, \(summary.movedMessages) filed\(Terminal.reset)")
+                var line = "  \(Terminal.brightGreen)\(summary.matched) matched\(Terminal.reset) · \(Terminal.brightYellow)\(summary.ambiguous) ambiguous\(Terminal.reset) · \(summary.pending) pending · \(summary.newReceipts) new receipt(s)"
+                if summary.errors > 0 {
+                    line += " · \(Terminal.brightRed)\(summary.errors) error(s)\(Terminal.reset)"
+                }
+                print(line)
             }
 
             print("\nArchive: \(try ReceiptStore().rootURL.path)")

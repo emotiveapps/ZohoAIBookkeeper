@@ -295,6 +295,25 @@ struct MailboxFilingTests {
     }
 }
 
+@Suite("TextPDFRenderer")
+struct TextPDFRendererTests {
+
+    @Test("Renders text into a valid, paginated PDF")
+    func rendersPDF() {
+        let short = TextPDFRenderer.pdfData(text: "Total: $42.50", title: "Acme — 2026-08-01")
+        #expect(short != nil)
+        #expect(short?.prefix(5) == Data("%PDF-".utf8))
+
+        let long = TextPDFRenderer.pdfData(
+            text: String(repeating: "Line of receipt text with an amount $12.34\n", count: 500)
+        )
+        #expect(long != nil)
+        // A 500-line document must span multiple pages, so it should be
+        // meaningfully larger than the single-page render.
+        #expect((long?.count ?? 0) > (short?.count ?? 0))
+    }
+}
+
 @Suite("Graph tokens")
 struct GraphTokenTests {
 
