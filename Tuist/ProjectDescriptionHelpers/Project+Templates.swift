@@ -15,10 +15,28 @@ public enum Constants {
         "SWIFT_VERSION": "6.0",
         "ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS": "YES",
         "ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS": "YES",
-        "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
+        // NO so the SwiftLint script phase can read the source tree and the
+        // repo-root .swiftlint.yml (the lint phase is our only build script).
+        "ENABLE_USER_SCRIPT_SANDBOXING": "NO",
         "SWIFT_EMIT_LOC_STRINGS": "YES",
         "STRING_CATALOG_GENERATE_SYMBOLS": "YES",
     ]
+
+    /// SwiftLint as a build phase, using the same mise-pinned binary and
+    /// repo-root .swiftlint.yml as `just lint` and (eventually) CI — one
+    /// version pin governs every surface. Skips quietly if mise isn't set up.
+    public static let lintScript: TargetScript = .post(
+        script: """
+        export PATH="$HOME/.local/share/mise/shims:$PATH"
+        if command -v swiftlint >/dev/null 2>&1; then
+          swiftlint lint --config "${SRCROOT}/../../.swiftlint.yml" "${SRCROOT}/Sources"
+        else
+          echo "warning: SwiftLint not installed — run 'mise install' (skipping lint)"
+        fi
+        """,
+        name: "SwiftLint",
+        basedOnDependencyAnalysis: false
+    )
 
     public static func deploymentTargets(for platforms: Set<Platform>) -> DeploymentTargets {
         .multiplatform(
@@ -56,6 +74,7 @@ public extension Project {
                 deploymentTargets: deploymentTargets,
                 sources: sources,
                 resources: resources,
+                scripts: [Constants.lintScript],
                 dependencies: dependencies,
                 settings: frameworkSettings
             ),
@@ -96,6 +115,7 @@ public extension Project {
                 bundleId: "\(Constants.organizationName).\(name)",
                 deploymentTargets: Constants.deploymentTargets(for: [.macOS]),
                 sources: sources,
+                scripts: [Constants.lintScript],
                 dependencies: dependencies
             )
         ]
@@ -156,7 +176,8 @@ public extension Project {
                     ],
                 ]),
                 sources: shareExtension.sources,
-                entitlements: shareExtension.entitlements
+                entitlements: shareExtension.entitlements,
+                scripts: [Constants.lintScript]
             ))
         }
 
@@ -181,6 +202,7 @@ public extension Project {
                 sources: sources,
                 resources: resources,
                 entitlements: entitlements,
+                scripts: [Constants.lintScript],
                 dependencies: appDependencies
             ),
             .target(
@@ -224,6 +246,7 @@ public extension Project {
                 ]),
                 sources: sources,
                 resources: resources,
+                scripts: [Constants.lintScript],
                 dependencies: dependencies
             )
         ]

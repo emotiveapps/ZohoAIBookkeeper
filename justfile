@@ -124,6 +124,15 @@ uninstall:
     echo "Kept: config.json, Keychain tokens, cache, logs, and the receipts archive."
     echo "(Reinstall any time with: just install)"
 
+# Lint all Swift sources (same mise-pinned SwiftLint + config as the Xcode build phase)
+lint *ARGS:
+    swiftlint lint {{ARGS}} Projects
+
+# Auto-fix lint violations where possible, then report what remains
+lint-fix:
+    swiftlint lint --fix Projects
+    swiftlint lint Projects
+
 # Clean generated files, build artifacts, and caches
 clean:
     -killall Xcode 2>/dev/null

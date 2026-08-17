@@ -78,7 +78,7 @@ A OneDrive folder can serve as a second receipts inbox (`receipts.onedrive.folde
 
 Editor keys: `Tab`/`↑↓` navigate · `Enter` select/edit · type to filter in pickers · `Esc` cancel · `Ctrl+Q` quit.
 
-Other recipes (`just --list` for all): `just generate` (regenerate workspace without opening), `just open`, `just test` / `just test-app` (unit tests), `just install` (install/update the CLI in `~/.zoho-ai-bookkeeper/bin`; doesn't touch the sync schedule), `just schedule` / `just unschedule` (turn the 4-hourly `receipts sync` LaunchAgent on/off — logs to `~/.zoho-ai-bookkeeper/logs/`), `just uninstall` (remove the LaunchAgent and installed CLI; keeps config, tokens, and the receipts archive), `just clean` (nuke workspace, DerivedData, Tuist cache). Both `just` and `tuist` are installed by [mise](https://mise.jdx.dev) via `.mise.toml` — run `mise install` once.
+Other recipes (`just --list` for all): `just generate` (regenerate workspace without opening), `just open`, `just test` / `just test-app` (unit tests), `just lint` / `just lint-fix` (SwiftLint — the same mise-pinned binary and config the Xcode build phase uses), `just install` (install/update the CLI in `~/.zoho-ai-bookkeeper/bin`; doesn't touch the sync schedule), `just schedule` / `just unschedule` (turn the 4-hourly `receipts sync` LaunchAgent on/off — logs to `~/.zoho-ai-bookkeeper/logs/`), `just uninstall` (remove the LaunchAgent and installed CLI; keeps config, tokens, and the receipts archive), `just clean` (nuke workspace, DerivedData, Tuist cache). Both `just` and `tuist` are installed by [mise](https://mise.jdx.dev) via `.mise.toml` — run `mise install` once.
 
 ## Project layout
 

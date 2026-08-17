@@ -25,6 +25,8 @@ just generate   # generate workspace only (does NOT open Xcode — intentional)
 just run        # build ZohoBookkeeperCLI (Debug, arm64) and run it with DYLD_FRAMEWORK_PATH set
 just test       # BookkeeperCore unit tests (macOS)
 just test-app   # app unit tests (iOS simulator)
+just lint       # SwiftLint over Projects/ (same binary+config as the Xcode build phase)
+just lint-fix   # SwiftLint autocorrect, then report what remains
 just clean      # kill Xcode, delete workspace/projects/DerivedData/Tuist cache
 
 # Direct builds
@@ -46,7 +48,7 @@ xcodebuild ... -scheme ZohoBookkeeperApp -destination "platform=iOS Simulator,na
 - Running the CLI binary outside `just run` requires `DYLD_FRAMEWORK_PATH` pointing at the Debug products dir (frameworks are dynamic, not embedded).
 - The `ZohoAIBookkeeper-All` scheme on a plain macOS destination fails on **provisioning** for the iOS/watch app targets. Build per-scheme with the right destination. Signing: team `M7T8YXH895`, bundle prefix `com.emotiveapps`. Test bundles use ad-hoc signing (set in `Project+Templates.swift`) so `xcodebuild test` needs no certificate.
 - Simulator tests can fail with "Simulator device failed to launch" if the sim is cold; `xcrun simctl boot "iPhone 17"` first, then run tests.
-- Linting: `.swiftlint.yml` / `.swiftformat` at repo root.
+- Linting: SwiftLint is pinned via mise (`.mise.toml`) so the terminal (`just lint`), the Xcode build phase (a `TargetScript` in `Project+Templates.swift`), and future CI all run the identical binary + repo-root `.swiftlint.yml`. Thresholds are tuned so errors are rare and builds stay green; warnings nag (legacy TUI is the main offender). `swiftlint` itself needs `DEVELOPER_DIR` pointing at full Xcode (SourceKit). `ENABLE_USER_SCRIPT_SANDBOXING` is deliberately NO so the lint phase can read the source tree. `.swiftformat` also lives at repo root.
 
 ## Configuration & secrets
 
