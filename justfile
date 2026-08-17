@@ -80,6 +80,19 @@ install: generate
     echo "NOTE: if macOS shows a Keychain prompt on first run, click 'Always Allow'"
     echo "(the installed binary is distinct from the dev build that saved the tokens)."
 
+# Leaves config, tokens, cache, logs, and the receipts archive untouched.
+# Remove the installed CLI and the scheduled receipts-sync LaunchAgent
+uninstall:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    PLIST="$HOME/Library/LaunchAgents/com.emotiveapps.zoho-bookkeeper.receipts-sync.plist"
+    launchctl bootout "gui/$(id -u)" "$PLIST" 2>/dev/null || true
+    rm -f "$PLIST"
+    rm -rf "$HOME/.zoho-ai-bookkeeper/bin"
+    echo "Removed the receipts-sync LaunchAgent and ~/.zoho-ai-bookkeeper/bin."
+    echo "Kept: config.json, Keychain tokens, cache, logs, and the receipts archive."
+    echo "(Reinstall any time with: just install)"
+
 # Clean generated files, build artifacts, and caches
 clean:
     -killall Xcode 2>/dev/null
