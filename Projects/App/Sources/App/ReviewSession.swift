@@ -38,6 +38,7 @@ public final class ReviewSession {
 
     private let workspace: Workspace
     private var prefetchTask: Task<Prepared, Never>?
+    private var loadGeneration = 0
 
     public init(workspace: Workspace, account: ZBBankAccount) {
         self.workspace = workspace
@@ -64,12 +65,15 @@ public final class ReviewSession {
     }
 
     public func start() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         state = .loading
         do {
             let all = try await workspace.client.fetchUncategorizedTransactions(
                 accountId: account.accountId,
                 year: nil
             )
+            guard generation == loadGeneration else { return }
             queue = await filterUnprocessed(all)
             position = 0
             guard !queue.isEmpty else {
@@ -79,7 +83,14 @@ public final class ReviewSession {
             state = .reviewing
             await present(index: 0)
         } catch {
-            state = .failed(error.localizedDescription)
+            guard generation == loadGeneration else { return }
+            // SwiftUI cancels the `.task` mid-navigation-transition and re-runs it
+            // on re-attach; a cancelled load is superseded, not failed.
+            if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                state = .loading
+            } else {
+                state = .failed(error.localizedDescription)
+            }
         }
     }
 

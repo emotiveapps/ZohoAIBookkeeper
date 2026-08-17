@@ -31,10 +31,15 @@ struct ReviewView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task {
-            if session == nil {
+            let session = self.session ?? {
                 let newSession = ReviewSession(workspace: workspace, account: account)
-                session = newSession
-                await newSession.start()
+                self.session = newSession
+                return newSession
+            }()
+            // The transition into a collapsed NavigationSplitView detail can cancel
+            // this task and re-run it; a session still in .loading needs a (re)start.
+            if session.state == .loading {
+                await session.start()
             }
         }
     }
