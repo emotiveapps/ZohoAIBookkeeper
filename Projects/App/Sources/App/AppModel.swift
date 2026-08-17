@@ -91,6 +91,8 @@ public final class Workspace {
     public let pipeline: SuggestionPipeline
     public let categorizer: TransactionCategorizer
     public let cache: CacheService?
+    public let receiptStore: ReceiptStore?
+    public let receiptPipeline: ReceiptPipeline?
 
     public private(set) var bankAccounts: [ZBBankAccount] = []
     public private(set) var categories: [String] = []
@@ -123,6 +125,21 @@ public final class Workspace {
         } catch {
             logger.error("Cache unavailable: \(error)")
             self.cache = nil
+        }
+
+        do {
+            let store = try ReceiptStore()
+            self.receiptStore = store
+            // No mailbox on iOS — the pipeline only processes shared files here.
+            self.receiptPipeline = ReceiptPipeline(
+                parser: ReceiptParser(apiKey: configuration.anthropic.apiKey),
+                store: store,
+                zoho: client
+            )
+        } catch {
+            logger.error("Receipt store unavailable: \(error)")
+            self.receiptStore = nil
+            self.receiptPipeline = nil
         }
     }
 

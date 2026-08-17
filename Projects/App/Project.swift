@@ -8,5 +8,11 @@ let project = Project.app(
         .external(name: "ZohoBooksClient"),
         .external(name: "SwiftAnthropic")
     ],
-    resources: ["Resources/**"]
+    resources: ["Resources/**"],
+    entitlements: "Entitlements/ZohoBookkeeperApp.entitlements",
+    shareExtension: Project.ShareExtensionSpec(
+        name: "ShareExtension",
+        sources: ["ShareExtension/Sources/**"],
+        entitlements: "Entitlements/ShareExtension.entitlements"
+    )
 )

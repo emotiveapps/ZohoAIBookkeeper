@@ -29,7 +29,9 @@ public actor ReceiptPipeline {
         public var lines: [String] = []
     }
 
-    private let graph: GraphMailClient
+    /// Nil when the pipeline only processes local files (iOS share extension) —
+    /// mailbox operations are skipped in that mode.
+    private let graph: GraphMailClient?
     private let parser: ReceiptParser
     private let store: ReceiptStore
     private let zoho: ZohoBooksClient<ZohoOAuth>
@@ -39,7 +41,7 @@ public actor ReceiptPipeline {
     private let minimumImageBytes = 20_000
 
     public init(
-        graph: GraphMailClient,
+        graph: GraphMailClient? = nil,
         parser: ReceiptParser,
         store: ReceiptStore,
         zoho: ZohoBooksClient<ZohoOAuth>,
@@ -52,7 +54,55 @@ public actor ReceiptPipeline {
         self.matcher = matcher
     }
 
+    /// Ingest a locally provided receipt file (share extension, camera roll):
+    /// parse → archive → match → attach when confident. Returns nil (with a
+    /// human-readable line) when the file isn't a receipt.
+    public func processLocalFile(
+        data: Data,
+        contentType: String,
+        filename: String,
+        source: ReceiptRecord.Source
+    ) async throws -> (record: ReceiptRecord?, line: String) {
+        let parsed = try await parser.parse(fileData: data, contentType: contentType, filename: filename)
+        guard parsed.confidence > 0 else {
+            return (nil, "skip: \(filename) — not a receipt")
+        }
+
+        let ext = (filename as NSString).pathExtension.lowercased()
+        var record = try await store.ingest(
+            fileData: data,
+            fileExtension: ext.isEmpty ? (contentType.contains("pdf") ? "pdf" : "jpg") : ext,
+            source: source,
+            parsed: parsed
+        )
+
+        var summary = SyncSummary()
+        let outcome = try await matchAgainstZoho(parsed)
+        try await apply(outcome: outcome, to: &record, dryRun: false, moveEmail: false, summary: &summary)
+        return (record, summary.lines.last ?? "")
+    }
+
+    /// Retry matching for all pending receipts (no mailbox needed; emails
+    /// are promoted when a graph client is available).
+    public func retryPending() async throws -> SyncSummary {
+        var summary = SyncSummary()
+        for record in await store.allRecords() where record.status == .pending {
+            do {
+                if try await rematch(record, dryRun: false, summary: &summary) {
+                    summary.retriedMatches += 1
+                }
+            } catch {
+                summary.errors += 1
+                summary.lines.append("error retrying \(record.parsed?.vendor ?? record.id): \(error.localizedDescription)")
+            }
+        }
+        return summary
+    }
+
     public func sync(dryRun: Bool = false, since: Date? = nil) async throws -> SyncSummary {
+        guard let graph else {
+            throw GraphError.notSignedIn(mailbox: "(no mailbox configured for this pipeline)")
+        }
         var summary = SyncSummary()
         let mailbox = graph.config.address
 
@@ -90,7 +140,7 @@ public actor ReceiptPipeline {
                     continue
                 }
 
-                let outcome = try await ingest(message: message, dryRun: dryRun, summary: &summary)
+                let outcome = try await ingest(message: message, graph: graph, dryRun: dryRun, summary: &summary)
                 summary.newReceipts += outcome.receiptsCreated
                 try await fileMessage(id: message.id, into: outcome.folder, dryRun: dryRun, summary: &summary)
             } catch {
@@ -180,6 +230,7 @@ public actor ReceiptPipeline {
         dryRun: Bool,
         summary: inout SyncSummary
     ) async throws {
+        guard let graph else { return }
         if dryRun {
             summary.lines.append("would move → \(Self.folderRoot)/\(folder.rawValue)")
             return
@@ -205,7 +256,8 @@ public actor ReceiptPipeline {
     /// Move the email associated with a record, when we still know where it is.
     /// Mailbox trouble here must never fail the bookkeeping operation itself.
     private func moveEmailIfPossible(for record: ReceiptRecord, into folder: MailFolder) async throws {
-        guard record.source.kind == "email",
+        guard let graph,
+              record.source.kind == "email",
               record.source.mailbox == graph.config.address,
               let messageId = record.source.messageId else { return }
         do {
@@ -228,6 +280,7 @@ public actor ReceiptPipeline {
 
     private func ingest(
         message: GraphMailClient.MailMessage,
+        graph: GraphMailClient,
         dryRun: Bool,
         summary: inout SyncSummary
     ) async throws -> IngestOutcome {

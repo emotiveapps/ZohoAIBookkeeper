@@ -109,14 +109,57 @@ public extension Project {
         )
     }
 
+    /// Configuration for an embedded share extension target.
+    struct ShareExtensionSpec {
+        public let name: String
+        public let sources: SourceFilesList
+        public let entitlements: Entitlements?
+
+        public init(name: String, sources: SourceFilesList, entitlements: Entitlements? = nil) {
+            self.name = name
+            self.sources = sources
+            self.entitlements = entitlements
+        }
+    }
+
     /// Creates an iOS app project
     static func app(
         name: String,
         dependencies: [TargetDependency] = [],
         sources: SourceFilesList = ["Sources/**"],
         resources: ResourceFileElements? = nil,
-        entitlements: Entitlements? = nil
+        entitlements: Entitlements? = nil,
+        shareExtension: ShareExtensionSpec? = nil
     ) -> Project {
+        var appDependencies = dependencies
+        var extensionTargets: [Target] = []
+
+        if let shareExtension {
+            appDependencies.append(.target(name: shareExtension.name))
+            extensionTargets.append(.target(
+                name: shareExtension.name,
+                destinations: [.iPhone, .iPad],
+                product: .appExtension,
+                bundleId: "\(Constants.organizationName).\(name).\(shareExtension.name)",
+                deploymentTargets: Constants.deploymentTargets(for: [.iOS]),
+                infoPlist: .extendingDefault(with: [
+                    "CFBundleDisplayName": "Save to Bookkeeper",
+                    "NSExtension": [
+                        "NSExtensionPointIdentifier": "com.apple.share-services",
+                        "NSExtensionPrincipalClass": "$(PRODUCT_MODULE_NAME).ShareViewController",
+                        "NSExtensionAttributes": [
+                            "NSExtensionActivationRule": [
+                                "NSExtensionActivationSupportsImageWithMaxCount": 10,
+                                "NSExtensionActivationSupportsFileWithMaxCount": 10,
+                            ],
+                        ],
+                    ],
+                ]),
+                sources: shareExtension.sources,
+                entitlements: shareExtension.entitlements
+            ))
+        }
+
         let targets: [Target] = [
             .target(
                 name: name,
@@ -138,7 +181,7 @@ public extension Project {
                 sources: sources,
                 resources: resources,
                 entitlements: entitlements,
-                dependencies: dependencies
+                dependencies: appDependencies
             ),
             .target(
                 name: "\(name)Tests",
@@ -147,7 +190,8 @@ public extension Project {
                 bundleId: "\(Constants.organizationName).\(name)Tests",
                 deploymentTargets: Constants.deploymentTargets(for: [.iOS]),
                 sources: ["Tests/**"],
-                dependencies: [.target(name: name)]
+                dependencies: [.target(name: name)],
+                settings: .settings(base: ["CODE_SIGN_IDENTITY": "-"])
             )
         ]
 
@@ -156,7 +200,7 @@ public extension Project {
             organizationName: Constants.organizationName,
             options: .options(automaticSchemesOptions: .disabled),
             settings: .settings(base: Constants.sharedSettings),
-            targets: targets
+            targets: targets + extensionTargets
         )
     }
 

@@ -43,7 +43,7 @@ public enum ReceiptStatus: String, Codable, Sendable {
 
 /// The sidecar record stored next to each archived receipt file. The archive
 /// (file + sidecar) is the durable audit trail, independent of Zoho.
-public struct ReceiptRecord: Codable, Sendable {
+public struct ReceiptRecord: Codable, Sendable, Identifiable {
     public struct Source: Codable, Sendable {
         /// "email" today; "share-extension" etc. later.
         public var kind: String

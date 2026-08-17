@@ -10,6 +10,7 @@ struct HomeView: View {
     @State private var selectedAccountId: String?
     @State private var showingSettings = false
     @State private var showingReadiness = false
+    @State private var showingReceipts = false
 
     var body: some View {
         NavigationSplitView {
@@ -22,6 +23,9 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showingReadiness) {
             ReadinessView(workspace: workspace)
+        }
+        .sheet(isPresented: $showingReceipts) {
+            ReceiptsView(workspace: workspace)
         }
     }
 
@@ -63,10 +67,23 @@ struct HomeView: View {
                     }
                 }
                 .foregroundStyle(.primary)
+
+                Button {
+                    showingReceipts = true
+                } label: {
+                    HStack {
+                        Label("Receipts", systemImage: "doc.text.viewfinder")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .foregroundStyle(.primary)
             } header: {
                 Text("Filing")
             } footer: {
-                Text("Completeness audit: uncategorized items, bank-feed gaps, expense totals per year.")
+                Text("Audit: uncategorized items, bank-feed gaps, totals. Receipts: archive, share-sheet capture, expense matching.")
             }
 
             Section("This device") {

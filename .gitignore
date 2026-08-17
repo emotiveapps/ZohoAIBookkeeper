@@ -47,3 +47,6 @@ build/
 
 # Exported tax reports (real financial data - commit deliberately if desired)
 reports/
+
+# Scratch data (bank exports etc. - real financial data)
+tmp/
