@@ -20,7 +20,8 @@
     ],
     "onedrive": {
       "folder_path": "03_Finance/Receipts"
-    }
+    },
+    "archive_path": "/path/to/backed-up/Receipts Archive"
   },
   "category_mapping": {
     "categories": [

@@ -47,7 +47,7 @@ New features hammer endpoints the client handles poorly (see `../ZohoBooksClient
 **Pipeline** (all new BookkeeperCore services, protocol seams for tests)
 - `ReceiptParser`: Claude vision/PDF call extracts vendor, date, total, currency, card last-4 → structured `ParsedReceipt` (reuse `ClaudeService`'s JSON-response pattern + the hardened parser).
 - `ReceiptMatcher`: candidate Zoho expenses by amount (±$0.01, then ±2% for tips/FX), date window (±5 days), vendor similarity. Confident match → `uploadExpenseAttachment` (already exists in ZohoBooksClient) and record linkage. Ambiguous → review queue. No match → **hold & retry** after every `receipts sync` and after every `clean`/app save session.
-- `ReceiptStore`: local filing cabinet `~/.zoho-ai-bookkeeper/receipts/<year>/` — original file + JSON sidecar (parse result, match status, Zoho expense id, message id for dedupe). This is the audit archive even independent of Zoho (IRS retention: keep ≥7 years).
+- `ReceiptStore`: local filing cabinet at `receipts.archive_path` (visible, backed-up; e.g. OneDrive `03_Finance/Receipts Archive`), `<year>/` — original file + JSON sidecar (parse result, match status, Zoho expense id, message id for dedupe). This is the audit archive even independent of Zoho (IRS retention: keep ≥7 years).
 
 **Review UX**: app gets a "Receipts" section (pending/ambiguous queue, one-tap confirm match); CLI gets `receipts list|match|sync`.
 

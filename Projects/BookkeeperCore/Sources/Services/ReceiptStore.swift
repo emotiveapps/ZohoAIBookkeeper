@@ -6,20 +6,21 @@ import Foundation
 public actor ReceiptStore {
     private let root: URL
 
-    public init(root: URL? = nil) throws {
-        if let root {
-            self.root = root
-        } else {
-            #if os(macOS)
-            self.root = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".zoho-ai-bookkeeper/receipts")
-            #else
-            let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-            self.root = documents.appendingPathComponent("Receipts")
-            #endif
-        }
-        try FileManager.default.createDirectory(at: self.root, withIntermediateDirectories: true)
+    /// The archive location is always explicit on macOS — it's IRS-retention
+    /// audit data and belongs in a visible, backed-up folder chosen by the
+    /// owner (`receipts.archive_path` in config), never a hidden default.
+    public init(root: URL) throws {
+        self.root = root
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     }
+
+    #if !os(macOS)
+    /// iOS/watchOS: the app's Documents container (included in device backups).
+    public init() throws {
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        try self.init(root: documents.appendingPathComponent("Receipts"))
+    }
+    #endif
 
     public nonisolated var rootURL: URL { root }
 

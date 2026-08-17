@@ -19,6 +19,19 @@ struct Receipts: AsyncParsableCommand {
         return mailboxes
     }
 
+    /// The durable receipt archive at `receipts.archive_path` — required:
+    /// audit data belongs in a visible, backed-up folder of the owner's
+    /// choosing, and there is deliberately no hidden default location.
+    static func store(for config: FullConfiguration) throws -> ReceiptStore {
+        guard let path = config.receipts?.archivePath, !path.isEmpty else {
+            throw ValidationError(
+                "receipts.archive_path is not set in config.json. Point it at your receipt archive "
+                    + "(a visible, backed-up folder — NOT inside the swept OneDrive receipts folder)."
+            )
+        }
+        return try ReceiptStore(root: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
+    }
+
     // MARK: - Login
 
     struct Login: AsyncParsableCommand {
@@ -68,7 +81,7 @@ struct Receipts: AsyncParsableCommand {
             let config = try ConfigLoader.load()
             let zoho = try await createZohoClient(config: config, verbose: options.verbose)
             let parser = ReceiptParser(apiKey: config.anthropic.apiKey)
-            let store = try ReceiptStore()
+            let store = try Receipts.store(for: config)
 
             let sinceDate: Date?
             if let since {
@@ -123,7 +136,7 @@ struct Receipts: AsyncParsableCommand {
                 printSummary(summary, scanned: "receipt(s)")
             }
 
-            print("\nArchive: \(try ReceiptStore().rootURL.path)")
+            print("\nArchive: \(store.rootURL.path)")
         }
 
         private func printSummary(_ summary: ReceiptPipeline.SyncSummary, scanned: String) {
@@ -150,7 +163,7 @@ struct Receipts: AsyncParsableCommand {
         var status: String?
 
         func run() async throws {
-            let store = try ReceiptStore()
+            let store = try Receipts.store(for: ConfigLoader.load())
             var records = await store.allRecords()
             if let status {
                 guard let filter = ReceiptStatus(rawValue: status) else {
@@ -208,7 +221,7 @@ struct Receipts: AsyncParsableCommand {
         func run() async throws {
             let config = try ConfigLoader.load()
             let zoho = try await createZohoClient(config: config, verbose: options.verbose)
-            let store = try ReceiptStore()
+            let store = try Receipts.store(for: config)
 
             guard let record = await store.record(idPrefix: id) else {
                 throw ValidationError("No unique receipt matches ID prefix \"\(id)\" — check `receipts list`.")
