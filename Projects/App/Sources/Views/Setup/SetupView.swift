@@ -33,7 +33,7 @@ struct SetupView: View {
                 if let connectionError {
                     Section {
                         Label(connectionError, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
+                            .foregroundStyle(AppTheme.Colors.error)
                             .font(.callout)
                     }
                 }
@@ -81,11 +81,11 @@ struct SetupView: View {
                         : "Imported",
                     systemImage: "checkmark.circle.fill"
                 )
-                .foregroundStyle(.green)
+                .foregroundStyle(AppTheme.Colors.success)
                 .font(.callout)
             case .failure(let message):
                 Label(message, systemImage: "xmark.circle.fill")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(AppTheme.Colors.error)
                     .font(.callout)
             case nil:
                 EmptyView()

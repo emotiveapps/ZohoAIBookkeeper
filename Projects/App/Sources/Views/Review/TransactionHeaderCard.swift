@@ -16,8 +16,8 @@ struct TransactionHeaderCard: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 Text(transaction.displayAmount)
-                    .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                    .foregroundStyle(isExpense ? Color.red : Color.green)
+                    .font(AppTheme.Typography.amount)
+                    .foregroundStyle(isExpense ? AppTheme.Colors.error : AppTheme.Colors.success)
                 Spacer()
                 Text(transaction.date)
                     .font(.subheadline)
@@ -34,8 +34,7 @@ struct TransactionHeaderCard: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+        .cardStyle()
     }
 }

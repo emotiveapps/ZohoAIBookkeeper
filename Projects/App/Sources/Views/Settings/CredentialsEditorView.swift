@@ -21,7 +21,7 @@ struct CredentialsEditorView: View {
             if let saveError {
                 Section {
                     Label(saveError, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(AppTheme.Colors.error)
                         .font(.callout)
                 }
             }

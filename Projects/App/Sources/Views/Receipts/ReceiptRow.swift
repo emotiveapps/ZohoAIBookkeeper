@@ -25,7 +25,7 @@ struct ReceiptRow: View {
             }
             if record.status == .matched {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppTheme.Colors.success)
             }
         }
     }

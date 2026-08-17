@@ -33,10 +33,10 @@ struct AccountRow: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(.orange, in: Capsule())
+                    .background(AppTheme.Colors.warning, in: Capsule())
             } else if pendingCount == 0 {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppTheme.Colors.success)
             }
         }
         .padding(.vertical, 2)

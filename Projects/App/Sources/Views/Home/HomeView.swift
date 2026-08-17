@@ -34,7 +34,7 @@ struct HomeView: View {
             if let error = workspace.lastError {
                 Section {
                     Label(error, systemImage: "wifi.exclamationmark")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(AppTheme.Colors.error)
                         .font(.callout)
                 }
             }
@@ -59,7 +59,7 @@ struct HomeView: View {
                         if workspace.totalPendingCount > 0 {
                             Text("\(workspace.totalPendingCount) to review")
                                 .font(.caption)
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(AppTheme.Colors.warning)
                         }
                         Image(systemName: "chevron.right")
                             .font(.caption)
@@ -88,9 +88,9 @@ struct HomeView: View {
 
             Section("This device") {
                 HStack(spacing: 12) {
-                    StatTile(title: "Done", value: workspace.processedCount, tint: .green)
-                    StatTile(title: "Skipped", value: workspace.skippedCount, tint: .orange)
-                    StatTile(title: "Vendors", value: workspace.vendors.count, tint: .blue)
+                    StatTile(title: "Done", value: workspace.processedCount, tint: AppTheme.Colors.success)
+                    StatTile(title: "Skipped", value: workspace.skippedCount, tint: AppTheme.Colors.warning)
+                    StatTile(title: "Vendors", value: workspace.vendors.count, tint: AppTheme.Colors.accent)
                 }
                 .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
                 .listRowBackground(Color.clear)

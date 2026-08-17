@@ -78,7 +78,7 @@ struct SettingsView: View {
             }
             if let error = workspace.lastError {
                 Label(error, systemImage: "wifi.exclamationmark")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(AppTheme.Colors.error)
                     .font(.callout)
             }
         }
@@ -109,10 +109,10 @@ struct SettingsView: View {
                 ProgressView().controlSize(.small)
             case .ok:
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppTheme.Colors.success)
             case .unavailable:
                 Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(AppTheme.Colors.error)
             case .notConfigured:
                 Image(systemName: "minus.circle")
                     .foregroundStyle(.tertiary)
@@ -184,7 +184,7 @@ struct SettingsView: View {
                 failed ? "Finished with errors" : "Finished",
                 systemImage: failed ? "exclamationmark.triangle.fill" : "checkmark.circle.fill"
             )
-            .foregroundStyle(failed ? .orange : .green)
+            .foregroundStyle(failed ? AppTheme.Colors.warning : AppTheme.Colors.success)
             Text(line)
                 .font(.caption)
                 .foregroundStyle(.secondary)

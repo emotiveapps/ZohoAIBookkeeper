@@ -18,13 +18,13 @@ struct MicrosoftSignInSheet: View {
                 if finished {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 56))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(AppTheme.Colors.success)
                     Text("Signed in")
                         .font(.title2.weight(.semibold))
                 } else if let errorMessage {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 44))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(AppTheme.Colors.warning)
                     Text(errorMessage)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)

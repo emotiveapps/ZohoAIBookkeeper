@@ -124,7 +124,7 @@ struct ReviewView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Label("AI suggestion", systemImage: "sparkles")
-                    .font(.subheadline.weight(.semibold))
+                    .font(AppTheme.Typography.cardTitle)
                 Spacer()
                 ConfidenceBadge(confidence: draft.suggestion.confidence)
                 Button {
@@ -148,9 +148,8 @@ struct ReviewView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+        .cardStyle()
     }
 
     private func decisionCard(_ session: ReviewSession, draft: CategorizedTransaction) -> some View {
@@ -220,11 +219,11 @@ struct ReviewView: View {
                 Divider()
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(AppTheme.Colors.error)
                     .decisionRow()
             }
         }
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+        .background(AppTheme.Colors.card, in: RoundedRectangle(cornerRadius: AppTheme.Radius.medium))
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .category:
@@ -249,7 +248,7 @@ struct ReviewView: View {
     private func actionBar(_ session: ReviewSession) -> some View {
         HStack(spacing: 12) {
             Text("\(min(session.position + 1, session.totalCount)) of \(session.totalCount)")
-                .font(.footnote.monospacedDigit())
+                .font(AppTheme.Typography.counter)
                 .foregroundStyle(.secondary)
                 .frame(minWidth: 56, alignment: .leading)
 

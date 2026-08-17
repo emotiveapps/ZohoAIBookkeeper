@@ -7,7 +7,7 @@ struct ConfidenceBadge: View {
     let confidence: Int
 
     private var color: Color {
-        confidence >= 80 ? .green : confidence >= 50 ? .orange : .red
+        confidence >= 80 ? AppTheme.Colors.success : confidence >= 50 ? AppTheme.Colors.warning : AppTheme.Colors.error
     }
 
     var body: some View {

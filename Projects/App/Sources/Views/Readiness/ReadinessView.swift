@@ -91,11 +91,11 @@ struct ReadinessView: View {
             Section {
                 if report.blockers.isEmpty {
                     Label("No blockers — FY\(String(report.year)) looks ready to file", systemImage: "checkmark.seal.fill")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(AppTheme.Colors.success)
                 } else {
                     ForEach(report.blockers, id: \.self) { blocker in
                         Label(blocker, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
+                            .foregroundStyle(AppTheme.Colors.error)
                             .font(.callout)
                     }
                 }
@@ -115,10 +115,10 @@ struct ReadinessView: View {
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
-                                    .background(.orange, in: Capsule())
+                                    .background(AppTheme.Colors.warning, in: Capsule())
                             } else {
                                 Image(systemName: "checkmark.circle")
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(AppTheme.Colors.success)
                             }
                         }
                         Text("\(account.transactionCount) transactions")
@@ -127,7 +127,7 @@ struct ReadinessView: View {
                         ForEach(Array(account.gaps.findings.enumerated()), id: \.offset) { _, finding in
                             Label(finding.summary, systemImage: "wifi.exclamationmark")
                                 .font(.caption)
-                                .foregroundStyle(finding.severity == .critical ? .red : .orange)
+                                .foregroundStyle(finding.severity == .critical ? AppTheme.Colors.error : AppTheme.Colors.warning)
                         }
                     }
                     .padding(.vertical, 2)
@@ -149,7 +149,7 @@ struct ReadinessView: View {
                 if report.expenses.missingVendorCount > 0 {
                     Label("\(report.expenses.missingVendorCount) expenses missing a vendor", systemImage: "person.crop.circle.badge.questionmark")
                         .font(.callout)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(AppTheme.Colors.warning)
                 }
             } header: {
                 Text("Expenses (\(report.expenses.count))")
