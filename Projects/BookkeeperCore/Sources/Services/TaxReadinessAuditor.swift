@@ -127,12 +127,18 @@ public actor TaxReadinessAuditor {
         var accountAudits: [TaxReadinessReport.AccountAudit] = []
         for account in bankAccounts {
             progress?("Scanning \(account.accountName)…")
+            // Zoho ignores date_start/date_end when filter_by is Status.All,
+            // so scope to the year client-side (GapDetector filters again
+            // internally; the counts below must match what it sees).
             let transactions = try await client.fetchTransactions(
                 accountId: account.accountId,
                 dateStart: dateStart,
                 dateEnd: dateEnd,
                 status: .all
-            )
+            ).filter { transaction in
+                guard let date = GapDetector.parseDate(transaction.date) else { return false }
+                return date >= rangeStart && date <= rangeEndOfYear
+            }
             let uncategorized = transactions.filter {
                 ($0.status ?? "").lowercased() == "uncategorized"
             }
