@@ -76,7 +76,7 @@ zoho-bookkeeper receipts attach --id <id> --expense <id>    # resolve ambiguous 
 
 Editor keys: `Tab`/`↑↓` navigate · `Enter` select/edit · type to filter in pickers · `Esc` cancel · `Ctrl+Q` quit.
 
-Other recipes (`just --list` for all): `just generate` (regenerate workspace without opening), `just open`, `just test` / `just test-app` (unit tests), `just clean` (nuke workspace, DerivedData, Tuist cache). Both `just` and `tuist` are installed by [mise](https://mise.jdx.dev) via `.mise.toml` — run `mise install` once.
+Other recipes (`just --list` for all): `just generate` (regenerate workspace without opening), `just open`, `just test` / `just test-app` (unit tests), `just install` (install the CLI to `~/.zoho-ai-bookkeeper/bin` and schedule `receipts sync` every 4 hours via LaunchAgent), `just clean` (nuke workspace, DerivedData, Tuist cache). Both `just` and `tuist` are installed by [mise](https://mise.jdx.dev) via `.mise.toml` — run `mise install` once.
 
 ## Project layout
 
@@ -98,7 +98,7 @@ just test-app   # app unit tests (iOS simulator)
 ## Project status
 
 - **CLI** — works end to end; the original daily driver.
-- **iOS/iPad app** — rewritten (Aug 2026) around a triage-first review flow: Keychain-persisted credentials, live AI suggestions with prefetch, searchable hierarchical category picker, vendor creation, adaptive iPhone/iPad layout. Builds and unit-tests clean; needs a run on a real device against live data to shake out UX.
+- **iOS/iPad app** — rewritten (Aug 2026) around a triage-first review flow: Keychain-persisted credentials, live AI suggestions with prefetch, searchable hierarchical category picker, vendor creation, adaptive iPhone/iPad layout. Includes a **share extension** ("Save to Bookkeeper"): share any receipt PDF/photo from any app and the Receipts screen parses, archives, and matches it to a Zoho expense. Builds and unit-tests clean; needs a run on a real device against live data to shake out UX.
 - **Watch app** — shows the real pending count synced from the iPhone via Watch Connectivity; the complication reads the same stored value.
 
 See `CODE_REVIEW.md` for the code-quality review and the resolution log of everything fixed since, and `CLAUDE.md` for contributor/agent-oriented documentation.
