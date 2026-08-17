@@ -221,6 +221,75 @@ public final class Workspace {
         WatchSync.shared.send(totalPending: totalPendingCount)
     }
 
+    // MARK: - Manual receipt sync (Settings → Maintenance)
+
+    public enum ReceiptSyncStatus: Equatable {
+        case idle
+        case running
+        case finished(String)
+        case failed(String)
+    }
+
+    public private(set) var receiptSyncStatus: ReceiptSyncStatus = .idle
+    public private(set) var lastReceiptSyncAt: Date? =
+        UserDefaults.standard.object(forKey: "lastReceiptSyncAt") as? Date
+    public private(set) var lastReceiptSyncResult: String? =
+        UserDefaults.standard.string(forKey: "lastReceiptSyncResult")
+
+    public var isSyncingReceipts: Bool { receiptSyncStatus == .running }
+
+    /// Process the share-extension queue, then retry all pending receipts
+    /// against Zoho. The retry pass is API-heavy, which is why the UI warns
+    /// when re-triggered within 24 hours. State lives here (not on a screen)
+    /// so Settings can be closed and revisited while a sync runs.
+    public func syncReceiptsNow() async {
+        guard !isSyncingReceipts, let receiptPipeline else { return }
+        receiptSyncStatus = .running
+
+        var sharedProcessed = 0
+        var errors: [String] = []
+
+        for item in ShareInbox.pendingItems() {
+            do {
+                let data = try Data(contentsOf: item.fileURL)
+                _ = try await receiptPipeline.processLocalFile(
+                    data: data,
+                    contentType: item.contentType,
+                    filename: item.originalName,
+                    source: ReceiptRecord.Source(
+                        kind: "share-extension",
+                        subject: item.originalName,
+                        receivedAt: item.sharedAt
+                    )
+                )
+                sharedProcessed += 1
+                ShareInbox.remove(item)
+            } catch {
+                errors.append("\(item.originalName): \(error.localizedDescription)")
+            }
+        }
+
+        var retried = 0
+        do {
+            let summary = try await receiptPipeline.retryPending()
+            retried = summary.retriedMatches
+        } catch {
+            errors.append(error.localizedDescription)
+        }
+
+        var parts: [String] = []
+        if sharedProcessed > 0 { parts.append("\(sharedProcessed) shared file(s) processed") }
+        parts.append(retried > 0 ? "\(retried) pending receipt(s) matched" : "no new matches")
+        if !errors.isEmpty { parts.append("\(errors.count) error(s)") }
+        let line = parts.joined(separator: " · ")
+
+        lastReceiptSyncAt = Date()
+        lastReceiptSyncResult = line
+        UserDefaults.standard.set(lastReceiptSyncAt, forKey: "lastReceiptSyncAt")
+        UserDefaults.standard.set(line, forKey: "lastReceiptSyncResult")
+        receiptSyncStatus = errors.isEmpty ? .finished(line) : .failed(line)
+    }
+
     /// A vendor was just created/used; keep the in-session list current.
     public func noteVendor(_ name: String) {
         guard !name.isEmpty, !vendors.contains(name) else { return }
