@@ -48,7 +48,10 @@ public struct ReceiptRecord: Codable, Sendable {
         /// "email" today; "share-extension" etc. later.
         public var kind: String
         public var mailbox: String?
+        /// Graph message ID (immutable format), used for mailbox operations (moves).
         public var messageId: String?
+        /// RFC 822 Message-ID header — the durable dedupe key (Graph IDs can drift).
+        public var internetMessageId: String?
         public var subject: String?
         public var from: String?
         public var receivedAt: Date?
@@ -57,6 +60,7 @@ public struct ReceiptRecord: Codable, Sendable {
             kind: String,
             mailbox: String? = nil,
             messageId: String? = nil,
+            internetMessageId: String? = nil,
             subject: String? = nil,
             from: String? = nil,
             receivedAt: Date? = nil
@@ -64,6 +68,7 @@ public struct ReceiptRecord: Codable, Sendable {
             self.kind = kind
             self.mailbox = mailbox
             self.messageId = messageId
+            self.internetMessageId = internetMessageId
             self.subject = subject
             self.from = from
             self.receivedAt = receivedAt

@@ -106,7 +106,10 @@ public actor GraphMailClient {
     }
 
     public struct MailMessage: Sendable {
+        /// Graph ID (immutable format — survives folder moves).
         public let id: String
+        /// RFC 822 Message-ID header: stable dedupe key independent of Graph IDs.
+        public let internetMessageId: String?
         public let subject: String
         public let from: String
         public let receivedAt: Date?
@@ -119,7 +122,9 @@ public actor GraphMailClient {
         public let data: Data
     }
 
-    private static let scope = "https://graph.microsoft.com/Mail.Read.Shared offline_access"
+    // ReadWrite (not just Read): filing processed emails into state folders
+    // needs folder creation + message moves. The pipeline never deletes mail.
+    private static let scope = "https://graph.microsoft.com/Mail.ReadWrite.Shared offline_access"
 
     public let config: GraphMailboxConfig
     private let tokenStore: GraphTokenStore
@@ -214,9 +219,11 @@ public actor GraphMailClient {
 
     // MARK: Mail
 
-    public func fetchMessages(since: Date?) async throws -> [MailMessage] {
-        var url = "https://graph.microsoft.com/v1.0/users/\(encodePath(config.address))/messages"
-            + "?$select=id,subject,from,receivedDateTime,hasAttachments"
+    /// Messages currently in the Inbox — the "to process" queue. Processed
+    /// messages are moved to state folders and thus leave this listing.
+    public func fetchInboxMessages(since: Date?) async throws -> [MailMessage] {
+        var url = "https://graph.microsoft.com/v1.0/users/\(encodePath(config.address))/mailFolders/inbox/messages"
+            + "?$select=id,internetMessageId,subject,from,receivedDateTime,hasAttachments"
             + "&$orderby=receivedDateTime%20desc&$top=50"
         if let since {
             let iso = Self.isoFormatter.string(from: since)
@@ -241,6 +248,7 @@ public actor GraphMailClient {
                     let emailAddress: EmailAddress?
                 }
                 let id: String
+                let internetMessageId: String?
                 let subject: String?
                 let from: From?
                 let receivedDateTime: String?
@@ -250,6 +258,7 @@ public actor GraphMailClient {
             messages += decoded.value.map { message in
                 MailMessage(
                     id: message.id,
+                    internetMessageId: message.internetMessageId,
                     subject: message.subject ?? "(no subject)",
                     from: message.from?.emailAddress?.address ?? "",
                     receivedAt: message.receivedDateTime.flatMap { Self.isoFormatter.date(from: $0) },
@@ -259,6 +268,64 @@ public actor GraphMailClient {
             next = decoded.nextLink
         }
         return messages
+    }
+
+    // MARK: - Folders & moves
+
+    /// Find or create `parent/child` and return the child folder's ID.
+    /// Results are cached for the life of this client.
+    public func ensureFolder(parent: String, child: String) async throws -> String {
+        let cacheKey = "\(parent)/\(child)"
+        if let cached = folderIdCache[cacheKey] { return cached }
+
+        let parentId = try await ensureTopLevelFolder(named: parent)
+        let base = "https://graph.microsoft.com/v1.0/users/\(encodePath(config.address))/mailFolders/\(parentId)/childFolders"
+        let childId: String
+        if let existing = try await findFolder(named: child, listURL: base) {
+            childId = existing
+        } else {
+            childId = try await createFolder(named: child, createURL: base)
+        }
+        folderIdCache[cacheKey] = childId
+        return childId
+    }
+
+    /// Move a message into a folder. With immutable IDs the message keeps its ID.
+    public func moveMessage(id: String, toFolderId folderId: String) async throws {
+        let url = "https://graph.microsoft.com/v1.0/users/\(encodePath(config.address))/messages/\(id)/move"
+        _ = try await postJSON(url: url, body: ["destinationId": folderId])
+    }
+
+    private var folderIdCache: [String: String] = [:]
+
+    private func ensureTopLevelFolder(named name: String) async throws -> String {
+        if let cached = folderIdCache[name] { return cached }
+        let base = "https://graph.microsoft.com/v1.0/users/\(encodePath(config.address))/mailFolders"
+        let id: String
+        if let existing = try await findFolder(named: name, listURL: base) {
+            id = existing
+        } else {
+            id = try await createFolder(named: name, createURL: base)
+        }
+        folderIdCache[name] = id
+        return id
+    }
+
+    private func findFolder(named name: String, listURL: String) async throws -> String? {
+        let escaped = name.replacingOccurrences(of: "'", with: "''")
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name
+        let data = try await get(url: "\(listURL)?$filter=displayName%20eq%20'\(escaped)'")
+        struct Page: Decodable {
+            struct Folder: Decodable { let id: String }
+            let value: [Folder]
+        }
+        return try JSONDecoder().decode(Page.self, from: data).value.first?.id
+    }
+
+    private func createFolder(named name: String, createURL: String) async throws -> String {
+        let data = try await postJSON(url: createURL, body: ["displayName": name])
+        struct Folder: Decodable { let id: String }
+        return try JSONDecoder().decode(Folder.self, from: data).id
     }
 
     public func fetchAttachments(messageId: String) async throws -> [Attachment] {
@@ -350,10 +417,26 @@ public actor GraphMailClient {
     }
 
     private func get(url: String) async throws -> Data {
+        try await send(url: url, method: "GET", jsonBody: nil)
+    }
+
+    private func postJSON(url: String, body: [String: String]) async throws -> Data {
+        try await send(url: url, method: "POST", jsonBody: body)
+    }
+
+    private func send(url: String, method: String, jsonBody: [String: String]?) async throws -> Data {
         guard let requestURL = URL(string: url) else { throw GraphError.invalidResponse }
         let token = try await validAccessToken()
         var request = URLRequest(url: requestURL)
+        request.httpMethod = method
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        // Immutable IDs survive folder moves, so stored message IDs stay valid
+        // after we file messages into state folders.
+        request.setValue("IdType=\"ImmutableId\"", forHTTPHeaderField: "Prefer")
+        if let jsonBody {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONEncoder().encode(jsonBody)
+        }
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw GraphError.invalidResponse }
         guard (200 ... 299).contains(http.statusCode) else {

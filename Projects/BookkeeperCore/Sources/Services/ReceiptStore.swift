@@ -89,9 +89,27 @@ public actor ReceiptStore {
         return matches.count == 1 ? matches.first : nil
     }
 
-    /// Message IDs already ingested (email dedupe).
+    /// All identifiers already ingested (email dedupe): Graph IDs and RFC
+    /// Message-IDs both count, so records survive Graph ID format changes.
     public func knownMessageIds() -> Set<String> {
-        Set(allRecords().compactMap { $0.source.messageId })
+        var ids = Set<String>()
+        for record in allRecords() {
+            if let id = record.source.messageId { ids.insert(id) }
+            if let id = record.source.internetMessageId { ids.insert(id) }
+        }
+        return ids
+    }
+
+    /// Find an existing record for a message whose Graph ID has drifted
+    /// (e.g. records created before immutable IDs): match on mailbox +
+    /// subject + received time.
+    public func adoptableRecord(mailbox: String, subject: String, receivedAt: Date?) -> ReceiptRecord? {
+        guard let receivedAt else { return nil }
+        return allRecords().first { record in
+            record.source.mailbox == mailbox
+                && record.source.subject == subject
+                && abs((record.source.receivedAt?.timeIntervalSince(receivedAt)) ?? .infinity) < 2
+        }
     }
 
     // MARK: - Sync state

@@ -254,6 +254,47 @@ struct ReceiptStoreTests {
     }
 }
 
+@Suite("Mailbox filing")
+struct MailboxFilingTests {
+
+    @Test("An email's folder reflects its least-finished receipt")
+    func aggregateFolder() {
+        #expect(ReceiptPipeline.aggregateFolder(for: []) == .notAReceipt)
+        #expect(ReceiptPipeline.aggregateFolder(for: [.matched]) == .matched)
+        #expect(ReceiptPipeline.aggregateFolder(for: [.matched, .pending]) == .pending)
+        #expect(ReceiptPipeline.aggregateFolder(for: [.matched, .pending, .ambiguous]) == .needsReview)
+        #expect(ReceiptPipeline.aggregateFolder(for: [.skipped]) == .notAReceipt)
+    }
+
+    @Test("Dedupe covers both Graph IDs and RFC Message-IDs; adoption matches drifted IDs")
+    func dedupeAndAdoption() async throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("filing-tests-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = try ReceiptStore(root: dir)
+
+        let received = Date()
+        _ = try await store.ingest(
+            fileData: Data("x".utf8),
+            fileExtension: "pdf",
+            source: .init(
+                kind: "email", mailbox: "billing@x.com", messageId: "graph-1",
+                internetMessageId: "<abc@mail>", subject: "Receipt", receivedAt: received
+            ),
+            parsed: ParsedReceipt(vendor: "Acme", date: "2026-08-01", total: 10, confidence: 90)
+        )
+
+        let known = await store.knownMessageIds()
+        #expect(known.contains("graph-1"))
+        #expect(known.contains("<abc@mail>"))
+
+        let adopted = await store.adoptableRecord(mailbox: "billing@x.com", subject: "Receipt", receivedAt: received)
+        #expect(adopted != nil)
+        #expect(await store.adoptableRecord(mailbox: "billing@x.com", subject: "Other", receivedAt: received) == nil)
+        #expect(await store.adoptableRecord(mailbox: "billing@x.com", subject: "Receipt", receivedAt: received.addingTimeInterval(60)) == nil)
+    }
+}
+
 @Suite("Graph tokens")
 struct GraphTokenTests {
 

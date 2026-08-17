@@ -175,16 +175,20 @@ struct Receipts: AsyncParsableCommand {
             // Validate the expense exists before uploading.
             let detail = try await zoho.fetchExpense(expenseId: expense)
 
-            let fileData = try await store.fileData(for: record)
-            let filename = (record.relativePath as NSString).lastPathComponent
-            try await zoho.uploadExpenseAttachment(expenseId: expense, fileData: fileData, filename: filename)
-
-            var updated = record
-            updated.status = .matched
-            updated.matchedExpenseId = expense
-            updated.attachedToZoho = true
-            updated.candidateExpenseIds = []
-            try await store.update(updated)
+            // Route through the pipeline so the email is also filed under
+            // Bookkeeper/Matched in the mailbox it came from.
+            let mailboxConfig = config.receipts?.mailboxes.first { $0.address == record.source.mailbox }
+                ?? config.receipts?.mailboxes.first
+            guard let mailboxConfig else {
+                throw ValidationError("No receipt mailboxes configured.")
+            }
+            let pipeline = ReceiptPipeline(
+                graph: GraphMailClient(config: mailboxConfig),
+                parser: ReceiptParser(apiKey: config.anthropic.apiKey),
+                store: store,
+                zoho: zoho
+            )
+            try await pipeline.attach(record: record, expenseId: expense)
 
             print("\(Terminal.brightGreen)✓\(Terminal.reset) Attached \(record.parsed?.vendor ?? record.id) to \(detail.vendorName ?? "expense") (\(detail.date ?? "")) \(TaxReadinessReportFormatter.money(detail.total ?? detail.amount ?? 0))")
         }
