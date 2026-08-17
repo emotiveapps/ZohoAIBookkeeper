@@ -18,13 +18,28 @@ struct SettingsView: View {
                 statusSection
 
                 Section {
+                    connectionRow("Zoho Books", health: workspace.zohoHealth)
+                    connectionRow("Claude (Anthropic)", health: workspace.anthropicHealth)
+                    connectionRow(
+                        "Receipt Mailbox",
+                        health: workspace.mailboxHealth,
+                        detail: workspace.configuration.receipts?.mailboxes.first?.address
+                    )
+                    connectionRow(
+                        "Receipt Folder (OneDrive)",
+                        health: workspace.oneDriveHealth,
+                        detail: workspace.configuration.receipts?.onedrive?.folderPath
+                    )
                     NavigationLink {
                         CredentialsEditorView(workspace: workspace, onSaved: { dismiss() })
                     } label: {
                         Label("Credentials", systemImage: "key")
                     }
                 } footer: {
-                    Text("Zoho and Anthropic API keys. These rarely change — they're tucked away here so they can't be edited by accident.")
+                    Text("Zoho and Anthropic API keys.")
+                }
+                .task {
+                    await workspace.checkAnthropicHealth()
                 }
 
                 receiptSyncSection
@@ -57,6 +72,43 @@ struct SettingsView: View {
                     .font(.callout)
             }
         }
+    }
+
+    private func connectionRow(
+        _ title: String,
+        health: Workspace.ServiceHealth,
+        detail: String? = nil
+    ) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                if case .unavailable(let reason) = health {
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                } else if let detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            switch health {
+            case .checking:
+                ProgressView().controlSize(.small)
+            case .ok:
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            case .unavailable:
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.red)
+            case .notConfigured:
+                Image(systemName: "minus.circle")
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private var receiptSyncSection: some View {

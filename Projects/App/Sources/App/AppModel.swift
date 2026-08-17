@@ -221,6 +221,53 @@ public final class Workspace {
         WatchSync.shared.send(totalPending: totalPendingCount)
     }
 
+    // MARK: - Connection health (Settings status rows)
+
+    public enum ServiceHealth: Equatable {
+        case checking
+        case ok
+        /// Configured, but not currently usable (reason shown to the user).
+        case unavailable(String)
+        case notConfigured
+    }
+
+    /// Derived from the reference-data load — no extra API calls.
+    public var zohoHealth: ServiceHealth {
+        if let lastError { return .unavailable(lastError) }
+        if bankAccounts.isEmpty { return isRefreshing ? .checking : .unavailable("No accounts loaded yet") }
+        return .ok
+    }
+
+    public private(set) var anthropicHealth: ServiceHealth = .checking
+
+    /// One-token round trip; result is cached for the session once it succeeds.
+    public func checkAnthropicHealth() async {
+        if anthropicHealth == .ok { return }
+        anthropicHealth = .checking
+        if let error = await claudeService.ping() {
+            anthropicHealth = .unavailable(error)
+        } else {
+            anthropicHealth = .ok
+        }
+    }
+
+    /// Token presence on *this device* — Graph sign-in happens via the Mac CLI,
+    /// so these are expected to be unavailable on iPhone until in-app sign-in exists.
+    public var mailboxHealth: ServiceHealth {
+        guard let mailbox = configuration.receipts?.mailboxes.first else { return .notConfigured }
+        return GraphTokenStore(mailbox: mailbox).load() != nil
+            ? .ok
+            : .unavailable("Not signed in on this device")
+    }
+
+    public var oneDriveHealth: ServiceHealth {
+        guard configuration.receipts?.onedrive != nil,
+              let mailbox = configuration.receipts?.mailboxes.first else { return .notConfigured }
+        return GraphTokenStore(mailbox: mailbox).load() != nil
+            ? .ok
+            : .unavailable("Not signed in on this device")
+    }
+
     // MARK: - Manual receipt sync (Settings → Maintenance)
 
     public enum ReceiptSyncStatus: Equatable {

@@ -24,6 +24,22 @@ public actor ClaudeService {
     }
 
     /// Get a categorization suggestion for a bank transaction
+    /// Cheapest possible round-trip that proves the API key works: a one-token
+    /// Haiku call (fractions of a cent). Returns nil on success, else the error.
+    public func ping() async -> String? {
+        let parameters = MessageParameter(
+            model: AnthropicModel.latestHaiku.asModel,
+            messages: [.init(role: .user, content: .text("ping"))],
+            maxTokens: 1
+        )
+        do {
+            _ = try await service.createMessage(parameters)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
     public func suggestCategorization(
         transaction: ZBBankTransaction,
         bankAccounts: [ZBBankAccount],
