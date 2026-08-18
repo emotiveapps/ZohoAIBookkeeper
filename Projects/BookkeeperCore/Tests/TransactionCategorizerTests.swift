@@ -49,6 +49,16 @@ struct TransactionCategorizerTests {
         }
     }
 
+    @Test("Transfer whose transaction lacks its own account id is rejected up front")
+    func transferNeedsSourceAccount() async {
+        let categorizer = makeCategorizer()
+        // draft() builds its transaction without an accountId, so this must
+        // fail before any network call rather than send a one-sided transfer.
+        await #expect(throws: CategorizationError.self) {
+            try await categorizer.categorize(draft(type: .transfer, transferTo: "acc-2"))
+        }
+    }
+
     @Test("Categorization errors carry actionable messages")
     func errorMessages() {
         #expect(

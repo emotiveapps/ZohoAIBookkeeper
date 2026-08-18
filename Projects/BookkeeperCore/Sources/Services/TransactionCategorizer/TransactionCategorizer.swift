@@ -59,12 +59,20 @@ public struct TransactionCategorizer: Sendable {
             return attachedVendorName
 
         case .transfer:
-            guard let toAccountId = transaction.transferToAccountId, !toAccountId.isEmpty else {
+            guard let otherAccountId = transaction.transferToAccountId, !otherAccountId.isEmpty else {
                 throw CategorizationError.transferTargetMissing
             }
+            guard let ownAccountId = tx.accountId, !ownAccountId.isEmpty else {
+                throw CategorizationError.transferSourceMissing
+            }
+            // Zoho requires both endpoints of the transfer plus the date. A debit
+            // is money leaving this account; a credit is money arriving into it.
             let request = ZBCategorizeTransferRequest(
-                toAccountId: toAccountId,
+                toAccountId: tx.isDebit ? otherAccountId : ownAccountId,
+                fromAccountId: tx.isDebit ? ownAccountId : otherAccountId,
                 amount: tx.amount,
+                date: tx.date,
+                referenceNumber: tx.referenceNumber,
                 description: transaction.description
             )
             try await client.categorizeAsTransfer(transactionId: tx.transactionId, request: request)

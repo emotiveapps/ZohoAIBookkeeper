@@ -11,6 +11,8 @@ public struct CategorizedTransaction: Sendable {
     public var vendorName: String
     public var category: String
     public var description: String
+    /// The *other* end of a transfer: the destination for a debit, the origin
+    /// for a credit (the categorizer orients from/to by the debit direction).
     public var transferToAccountId: String?
 
     public init(transaction: ZBBankTransaction, suggestion: TransactionSuggestion) {
