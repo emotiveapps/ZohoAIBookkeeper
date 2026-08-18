@@ -63,8 +63,34 @@ struct CredentialsFormModelTests {
             anthropic: AnthropicConfiguration(apiKey: "key"),
             categoryMapping: CategoryMappingConfig(categories: [
                 CategoryConfig(name: "Parent", children: ["Child A", "Child B"])
-            ])
+            ]),
+            receipts: ReceiptsConfig(
+                mailboxes: [GraphMailboxConfig(
+                    tenantId: "tenant", clientId: "client", address: "billing@example.com"
+                )],
+                onedrive: OneDriveConfig(folderPath: "03_Finance/Receipts"),
+                archiveFolderPath: "03_Finance/App/Receipts Archive"
+            )
         )
+    }
+
+    @Test("Round-trips the receipts section (regression: it was silently dropped)")
+    func receiptsRoundTrip() {
+        var form = CredentialsFormModel()
+        form.apply(sampleConfig)
+
+        let rebuilt = form.configuration
+        let mailbox = rebuilt.receipts?.mailboxes.first
+        #expect(mailbox?.tenantId == "tenant")
+        #expect(mailbox?.clientId == "client")
+        #expect(mailbox?.address == "billing@example.com")
+        #expect(rebuilt.receipts?.onedrive?.folderPath == "03_Finance/Receipts")
+        #expect(rebuilt.receipts?.archiveFolderPath == "03_Finance/App/Receipts Archive")
+
+        // Blank receipt fields mean "not configured", not an empty section.
+        var empty = CredentialsFormModel()
+        empty.anthropicApiKey = "k"
+        #expect(empty.configuration.receipts == nil)
     }
 
     @Test("Round-trips a configuration including category mapping")

@@ -30,6 +30,33 @@ struct CredentialsFormSections: View {
         } footer: {
             Text("Used for AI categorization suggestions.")
         }
+
+        Section {
+            TextField("Entra Tenant ID", text: $form.receiptTenantId)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            TextField("Entra Client ID", text: $form.receiptClientId)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            TextField("Mailbox address", text: $form.receiptMailbox)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .keyboardType(.emailAddress)
+            TextField("OneDrive inbox folder", text: $form.oneDriveFolderPath)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            TextField("Archive folder", text: $form.archiveFolderPath)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+        } header: {
+            Text("Receipts (optional)")
+        } footer: {
+            Text(
+                "Microsoft 365 receipt capture: the Entra app + mailbox to sweep, "
+                    + "the OneDrive folder used as a receipts inbox, and the OneDrive "
+                    + "folder holding the receipt archive. Leave blank to disable."
+            )
+        }
     }
 }
 
