@@ -41,6 +41,8 @@ struct CredentialsEditorView: View {
                 .disabled(isSaving || !form.isValid)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.Colors.background)
         .navigationTitle("Credentials")
         #if !os(macOS)
         .navigationBarTitleDisplayMode(.inline)

@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import Observation
 import ZohoBooksClient
 import BookkeeperCore
@@ -110,6 +111,8 @@ struct ReceiptsView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.Colors.background)
         .refreshable {
             await model.refresh()
         }

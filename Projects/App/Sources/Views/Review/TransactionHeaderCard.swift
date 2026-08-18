@@ -18,7 +18,7 @@ struct TransactionHeaderCard: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(transaction.displayAmount)
                     .font(Theme.Typography.amount)
-                    .foregroundStyle(isExpense ? Theme.Colors.error : Theme.Colors.success)
+                    .foregroundStyle(isExpense ? Theme.Colors.textPrimary : Theme.Colors.success)
                 Spacer()
                 Text(transaction.date)
                     .font(.subheadline)

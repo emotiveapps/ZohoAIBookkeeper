@@ -102,6 +102,8 @@ struct HomeView: View {
                 .listRowBackground(Color.clear)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Theme.Colors.background)
         .navigationTitle("Bookkeeper")
         .overlay {
             if workspace.bankAccounts.isEmpty && workspace.isRefreshing {
@@ -145,6 +147,8 @@ struct HomeView: View {
                 systemImage: "tray.full",
                 description: Text("Choose a bank account to start reviewing its uncategorized transactions.")
             )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Theme.Colors.background)
         }
     }
 }

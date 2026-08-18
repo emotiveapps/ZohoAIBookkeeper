@@ -26,6 +26,8 @@ struct ReadinessView: View {
                     ProgressView()
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.Colors.background)
             .navigationTitle("Tax Readiness")
             #if !os(macOS)
             .navigationBarTitleDisplayMode(.inline)

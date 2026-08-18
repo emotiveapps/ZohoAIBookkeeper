@@ -56,6 +56,8 @@ struct SetupView: View {
                     .disabled(isConnecting || !form.isValid)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.Colors.background)
             .navigationTitle("Setup")
             .interactiveDismissDisabled()
         }

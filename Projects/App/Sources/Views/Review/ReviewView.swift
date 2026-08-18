@@ -82,25 +82,10 @@ struct ReviewView: View {
     private func reviewer(_ session: ReviewSession) -> some View {
         ScrollView {
             VStack(spacing: 16) {
-                if let draft = session.draft {
-                    TransactionHeaderCard(
-                        transaction: draft.transaction,
-                        accountType: account.accountType
-                    )
-
-                    suggestionCard(session, draft: draft)
-                    decisionCard(session, draft: draft)
-
-                    if let url = session.zohoURL {
-                        Link(destination: url) {
-                            Label("Open in Zoho Books", systemImage: "safari")
-                                .font(.callout)
-                        }
-                    }
-                } else {
-                    preparingCard
-                }
+                content(for: session)
             }
+            .frame(maxWidth: 700)
+            .frame(maxWidth: .infinity)
             .padding()
         }
         .background(Theme.Colors.background)
@@ -109,6 +94,28 @@ struct ReviewView: View {
             actionBar(session)
         }
         .animation(.default, value: session.isPreparing)
+    }
+
+    @ViewBuilder
+    private func content(for session: ReviewSession) -> some View {
+        if let draft = session.draft {
+            TransactionHeaderCard(
+                transaction: draft.transaction,
+                accountType: account.accountType
+            )
+
+            suggestionCard(session, draft: draft)
+            decisionCard(session, draft: draft)
+
+            if let url = session.zohoURL {
+                Link(destination: url) {
+                    Label("Open in Zoho Books", systemImage: "safari")
+                        .font(.callout)
+                }
+            }
+        } else {
+            preparingCard
+        }
     }
 
     private var preparingCard: some View {
@@ -156,12 +163,17 @@ struct ReviewView: View {
 
     private func decisionCard(_ session: ReviewSession, draft: CategorizedTransaction) -> some View {
         VStack(spacing: 0) {
-            Picker("Type", selection: binding(session, draft, \.selectedType)) {
-                ForEach(session.availableTypes, id: \.self) { type in
-                    Text(type.displayName).tag(type)
+            HStack {
+                Text("Type")
+                Spacer()
+                Picker("Type", selection: binding(session, draft, \.selectedType)) {
+                    ForEach(session.availableTypes, id: \.self) { type in
+                        Text(type.displayName).tag(type)
+                    }
                 }
+                .pickerStyle(.menu)
+                .labelsHidden()
             }
-            .pickerStyle(.menu)
             .decisionRow()
 
             if draft.selectedType == .expense {

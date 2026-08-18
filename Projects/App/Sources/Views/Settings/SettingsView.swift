@@ -56,6 +56,8 @@ struct SettingsView: View {
                 receiptSyncSection
                 maintenanceSection
             }
+            .scrollContentBackground(.hidden)
+            .background(Theme.Colors.background)
             .navigationTitle("Settings")
             #if !os(macOS)
             .navigationBarTitleDisplayMode(.inline)
