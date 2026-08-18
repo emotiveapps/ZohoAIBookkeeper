@@ -103,7 +103,7 @@ struct HomeView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Theme.Colors.background)
+        .background(Theme.Gradients.background)
         .navigationTitle("Bookkeeper")
         .overlay {
             if workspace.bankAccounts.isEmpty && workspace.isRefreshing {
@@ -148,7 +148,7 @@ struct HomeView: View {
                 description: Text("Choose a bank account to start reviewing its uncategorized transactions.")
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.Colors.background)
+            .background(Theme.Gradients.background)
         }
     }
 }

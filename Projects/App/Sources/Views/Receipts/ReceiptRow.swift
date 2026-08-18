@@ -17,7 +17,7 @@ struct ReceiptRow: View {
                     Text(record.source.kind == "email" ? "✉️" : "📤")
                 }
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.Colors.textSecondary)
             }
             Spacer()
             if let total = record.parsed?.total {

@@ -42,7 +42,7 @@ struct CredentialsEditorView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Theme.Colors.background)
+        .background(Theme.Gradients.background)
         .navigationTitle("Credentials")
         #if !os(macOS)
         .navigationBarTitleDisplayMode(.inline)

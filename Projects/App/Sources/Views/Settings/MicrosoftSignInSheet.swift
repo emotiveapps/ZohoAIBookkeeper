@@ -29,7 +29,7 @@ struct MicrosoftSignInSheet: View {
                         .foregroundStyle(Theme.Colors.warning)
                     Text(errorMessage)
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                     Button("Try Again") {
                         self.errorMessage = nil
                         code = nil
@@ -39,7 +39,7 @@ struct MicrosoftSignInSheet: View {
                 } else if let code {
                     Text("Enter this code on the Microsoft sign-in page, using the account with access to the billing mailbox:")
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.Colors.textSecondary)
 
                     Text(code.userCode)
                         .font(.system(.largeTitle, design: .monospaced).weight(.bold))

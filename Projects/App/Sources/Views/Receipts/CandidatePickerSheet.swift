@@ -1,4 +1,5 @@
 import SwiftUI
+import DesignSystem
 import Observation
 import ZohoBooksClient
 import BookkeeperCore
@@ -38,7 +39,7 @@ struct CandidatePickerSheet: View {
                                     Text(expense.vendorName ?? expense.accountName ?? "Expense")
                                     Text("\(expense.date ?? "") · \(expense.accountName ?? "")")
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Theme.Colors.textSecondary)
                                 }
                             }
                             .foregroundStyle(.primary)

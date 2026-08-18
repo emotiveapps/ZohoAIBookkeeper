@@ -88,7 +88,7 @@ struct ReviewView: View {
             .frame(maxWidth: .infinity)
             .padding()
         }
-        .background(Theme.Colors.background)
+        .background(Theme.Gradients.background)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
             actionBar(session)
@@ -123,7 +123,7 @@ struct ReviewView: View {
             ProgressView()
             Text("Getting AI suggestion…")
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.Colors.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
@@ -134,6 +134,7 @@ struct ReviewView: View {
             HStack {
                 Label("AI suggestion", systemImage: "sparkles")
                     .font(Theme.Typography.cardTitle)
+                    .foregroundStyle(Theme.Colors.accent)
                 Spacer()
                 ConfidenceBadge(confidence: draft.suggestion.confidence)
                 Button {
@@ -148,7 +149,7 @@ struct ReviewView: View {
             if !draft.suggestion.reasoning.isEmpty {
                 Text(draft.suggestion.reasoning)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.Colors.textSecondary)
             }
 
             ForEach(session.historyNotes, id: \.self) { note in
@@ -263,7 +264,7 @@ struct ReviewView: View {
         HStack(spacing: 12) {
             Text("\(min(session.position + 1, session.totalCount)) of \(session.totalCount)")
                 .font(Theme.Typography.counter)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.Colors.textSecondary)
                 .frame(minWidth: 56, alignment: .leading)
 
             Button(role: .destructive) {

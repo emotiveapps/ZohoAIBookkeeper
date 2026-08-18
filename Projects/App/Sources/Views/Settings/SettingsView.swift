@@ -61,7 +61,7 @@ struct SettingsView: View {
                 maintenanceSection
             }
             .scrollContentBackground(.hidden)
-            .background(Theme.Colors.background)
+            .background(Theme.Gradients.background)
             .navigationTitle("Settings")
             #if !os(macOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -86,7 +86,7 @@ struct SettingsView: View {
             LabeledContent("Vendors", value: "\(workspace.vendors.count)")
             LabeledContent("Category source") {
                 Text(workspace.categoryConfigs.isEmpty ? "Zoho chart of accounts" : "Imported hierarchy")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.Colors.textSecondary)
             }
             if let error = workspace.lastError {
                 Label(error, systemImage: "wifi.exclamationmark")
@@ -107,12 +107,12 @@ struct SettingsView: View {
                 if case .unavailable(let reason) = health {
                     Text(reason)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                         .lineLimit(2)
                 } else if let detail {
                     Text(detail)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
             Spacer()
@@ -140,7 +140,7 @@ struct SettingsView: View {
                 HStack(spacing: 10) {
                     ProgressView()
                     Text("Syncing receipts…")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                 }
             case .finished(let line):
                 syncResultRow(line, failed: false)
@@ -149,12 +149,12 @@ struct SettingsView: View {
             case .idle:
                 LabeledContent("Last synced") {
                     Text(lastSyncedDescription)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                 }
                 if let result = workspace.lastReceiptSyncResult {
                     Text(result)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                 }
             }
 
@@ -199,7 +199,7 @@ struct SettingsView: View {
             .foregroundStyle(failed ? Theme.Colors.warning : Theme.Colors.success)
             Text(line)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.Colors.textSecondary)
             Text("Last synced \(lastSyncedDescription)")
                 .font(.caption)
                 .foregroundStyle(.tertiary)

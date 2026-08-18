@@ -22,7 +22,7 @@ struct TransactionHeaderCard: View {
                 Spacer()
                 Text(transaction.date)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.Colors.textSecondary)
             }
 
             Text(transaction.displayDescription)

@@ -27,7 +27,7 @@ struct ReadinessView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Theme.Colors.background)
+            .background(Theme.Gradients.background)
             .navigationTitle("Tax Readiness")
             #if !os(macOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -69,7 +69,7 @@ struct ReadinessView: View {
                 ProgressView()
                 Text(status)
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.Colors.textSecondary)
             }
 
         case .failed(let message):
@@ -126,7 +126,7 @@ struct ReadinessView: View {
                         }
                         Text("\(account.transactionCount) transactions")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.Colors.textSecondary)
                         ForEach(Array(account.gaps.findings.enumerated()), id: \.offset) { _, finding in
                             Label(finding.summary, systemImage: "wifi.exclamationmark")
                                 .font(.caption)

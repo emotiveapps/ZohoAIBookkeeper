@@ -24,7 +24,7 @@ struct SetupView: View {
                 Section {
                     Text("Connect the app to your Zoho Books organization and the Anthropic API. Credentials are stored only in your device's Keychain.")
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                         .listRowBackground(Color.clear)
                 }
 
@@ -57,7 +57,7 @@ struct SetupView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Theme.Colors.background)
+            .background(Theme.Gradients.background)
             .navigationTitle("Setup")
             .interactiveDismissDisabled()
         }

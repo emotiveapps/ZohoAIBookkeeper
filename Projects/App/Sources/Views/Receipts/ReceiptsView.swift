@@ -59,7 +59,7 @@ struct ReceiptsView: View {
                                 .font(.callout)
                         }
                     } else if let status = model.statusLine {
-                        Text(status).font(.callout).foregroundStyle(.secondary)
+                        Text(status).font(.callout).foregroundStyle(Theme.Colors.textSecondary)
                     }
                     if model.queueCount > 0 && !model.isWorking {
                         Button("Process \(model.queueCount) shared item(s)") {
@@ -112,7 +112,7 @@ struct ReceiptsView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Theme.Colors.background)
+        .background(Theme.Gradients.background)
         .refreshable {
             await model.refresh()
         }

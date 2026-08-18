@@ -23,17 +23,18 @@ struct AccountRow: View {
                     }
                 }
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.Colors.textSecondary)
             }
 
             Spacer()
 
             if let pendingCount, pendingCount > 0 {
                 Text("\(pendingCount)")
-                    .font(.caption.weight(.bold))
+                    .font(.footnote.weight(.bold))
+                    .monospacedDigit()
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
                     .background(Theme.Colors.accent, in: Capsule())
             } else if pendingCount == 0 {
                 Image(systemName: "checkmark.circle.fill")
