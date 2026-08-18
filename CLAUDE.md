@@ -107,6 +107,15 @@ BookkeeperCore (framework; @_exported imports ZohoBooksClient)
               PickerSheets (searchable category/vendor), SettingsView, Components
   Watch ZohoBookkeeperWatchApp (WatchState + PhoneSyncReceiver: WCSession receiver,
         persists count for the complication), ContentView, PendingCountComplication
+        — sources live in Projects/Watch/, but the targets are defined in
+        Projects/App/Project.swift (WatchAppSpec) because Tuist only embeds
+        same-project watch targets; the watch app is embedded in the iOS app
+        (bundle ID …ZohoBookkeeperApp.watchkitapp) so installing the phone app
+        delivers it to the paired watch. The complication lives in the
+        ZohoBookkeeperWatchWidgets extension (Projects/Watch/Widgets/;
+        WidgetKit requires an appex — widgets in the app target never render);
+        app and widget share PendingCountStorage, compiled into both, backed
+        by App Group group.com.emotiveapps.ZohoBookkeeperApp
 ```
 
 **Zoho API quirks (verified live, Aug 2026 — cost us a whole debugging saga):**

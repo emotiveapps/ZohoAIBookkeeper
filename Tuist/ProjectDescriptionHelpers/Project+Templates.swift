@@ -142,6 +142,52 @@ public extension Project {
         }
     }
 
+    /// Configuration for an embedded companion watchOS app target.
+    ///
+    /// The watch target must live in the same project as the iOS app: Tuist
+    /// only generates the "Embed Watch Content" phase for same-project
+    /// dependencies (`directLocalTargetDependencies`). Sources may still live
+    /// elsewhere in the repo via relative globs.
+    struct WatchAppSpec {
+        public let name: String
+        public let sources: SourceFilesList
+        public let resources: ResourceFileElements?
+        public let entitlements: Entitlements?
+        public let dependencies: [TargetDependency]
+        public let widget: WatchWidgetSpec?
+
+        public init(
+            name: String,
+            sources: SourceFilesList,
+            resources: ResourceFileElements? = nil,
+            entitlements: Entitlements? = nil,
+            dependencies: [TargetDependency] = [],
+            widget: WatchWidgetSpec? = nil
+        ) {
+            self.name = name
+            self.sources = sources
+            self.resources = resources
+            self.entitlements = entitlements
+            self.dependencies = dependencies
+            self.widget = widget
+        }
+    }
+
+    /// Configuration for a WidgetKit extension embedded in the watch app —
+    /// complications only render from a widget extension, never from the
+    /// watch app target itself.
+    struct WatchWidgetSpec {
+        public let name: String
+        public let sources: SourceFilesList
+        public let entitlements: Entitlements?
+
+        public init(name: String, sources: SourceFilesList, entitlements: Entitlements? = nil) {
+            self.name = name
+            self.sources = sources
+            self.entitlements = entitlements
+        }
+    }
+
     /// Creates an iOS app project
     static func app(
         name: String,
@@ -149,10 +195,56 @@ public extension Project {
         sources: SourceFilesList = ["Sources/**"],
         resources: ResourceFileElements? = nil,
         entitlements: Entitlements? = nil,
-        shareExtension: ShareExtensionSpec? = nil
+        shareExtension: ShareExtensionSpec? = nil,
+        watchApp: WatchAppSpec? = nil
     ) -> Project {
         var appDependencies = dependencies
         var extensionTargets: [Target] = []
+
+        if let watchApp {
+            appDependencies.append(.target(name: watchApp.name))
+            // A companion watch app's bundle ID must be prefixed with the
+            // iOS app's bundle ID or watchOS refuses to install it; the
+            // widget extension's must be prefixed with the watch app's.
+            let watchBundleId = "\(Constants.organizationName).\(name).watchkitapp"
+            var watchDependencies = watchApp.dependencies
+
+            if let widget = watchApp.widget {
+                watchDependencies.append(.target(name: widget.name))
+                extensionTargets.append(.target(
+                    name: widget.name,
+                    destinations: [.appleWatch],
+                    product: .appExtension,
+                    bundleId: "\(watchBundleId).widgets",
+                    deploymentTargets: Constants.deploymentTargets(for: [.watchOS]),
+                    infoPlist: .extendingDefault(with: [
+                        "NSExtension": [
+                            "NSExtensionPointIdentifier": "com.apple.widgetkit-extension"
+                        ]
+                    ]),
+                    sources: widget.sources,
+                    entitlements: widget.entitlements,
+                    scripts: [Constants.lintScript]
+                ))
+            }
+
+            extensionTargets.append(.target(
+                name: watchApp.name,
+                destinations: [.appleWatch],
+                product: .app,
+                bundleId: watchBundleId,
+                deploymentTargets: Constants.deploymentTargets(for: [.watchOS]),
+                infoPlist: .extendingDefault(with: [
+                    "WKApplication": true,
+                    "WKCompanionAppBundleIdentifier": "\(Constants.organizationName).\(name)"
+                ]),
+                sources: watchApp.sources,
+                resources: watchApp.resources,
+                entitlements: watchApp.entitlements,
+                scripts: [Constants.lintScript],
+                dependencies: watchDependencies
+            ))
+        }
 
         if let shareExtension {
             appDependencies.append(.target(name: shareExtension.name))
@@ -223,40 +315,6 @@ public extension Project {
             options: .options(automaticSchemesOptions: .disabled),
             settings: .settings(base: Constants.sharedSettings),
             targets: targets + extensionTargets
-        )
-    }
-
-    /// Creates a watchOS app project
-    static func watchApp(
-        name: String,
-        dependencies: [TargetDependency] = [],
-        sources: SourceFilesList = ["Sources/**"],
-        resources: ResourceFileElements? = nil
-    ) -> Project {
-        let targets: [Target] = [
-            .target(
-                name: name,
-                destinations: [.appleWatch],
-                product: .app,
-                bundleId: "\(Constants.organizationName).\(name)",
-                deploymentTargets: Constants.deploymentTargets(for: [.watchOS]),
-                infoPlist: .extendingDefault(with: [
-                    "WKApplication": true,
-                    "WKCompanionAppBundleIdentifier": "\(Constants.organizationName).ZohoBookkeeperApp"
-                ]),
-                sources: sources,
-                resources: resources,
-                scripts: [Constants.lintScript],
-                dependencies: dependencies
-            )
-        ]
-
-        return Project(
-            name: name,
-            organizationName: Constants.organizationName,
-            options: .options(automaticSchemesOptions: .disabled),
-            settings: .settings(base: Constants.sharedSettings),
-            targets: targets
         )
     }
 
