@@ -23,11 +23,11 @@ The iPhone/iPad app runs the same loop as a one-transaction-at-a-time review scr
 - The **ZohoBooksClient** package checked out as a sibling directory:
 
   ```
-  Development/experiments/
-  ├── ZohoAIBookkeeper/   ← this repo
-  └── ZohoBooksClient/    ← required local dependency
   Development/LF/
+  ├── ZohoAIBookkeeper/   ← this repo
   └── DesignSystem/       ← required local dependency (shared LFB design tokens)
+  Development/OSS/
+  └── ZohoBooksClient/    ← required local dependency
   ```
 
 - A Zoho Books account with API credentials (client ID/secret, OAuth tokens, organization ID)

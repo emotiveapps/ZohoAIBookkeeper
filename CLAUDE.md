@@ -11,7 +11,7 @@ A personal bookkeeping tool that categorizes uncategorized Zoho Books bank trans
 ## Build system
 
 - **Tuist** generates the Xcode workspace from manifests. Never edit `.xcodeproj`/`.xcworkspace` by hand — they're generated and gitignored. Edit `Workspace.swift`, `Projects/*/Project.swift`, or `Tuist/ProjectDescriptionHelpers/Project+Templates.swift`, then **re-run `just generate`** (required after adding/removing source files — globs are resolved at generation time; a stale project fails with "Build input file cannot be found").
-- `Tuist/Package.swift` declares dependencies: **`../../ZohoBooksClient` (local sibling checkout — required; own `CODE_REVIEW.md`)**, **`~/Development/LF/DesignSystem` (local checkout — required; the shared Lucky Frog design tokens: `import DesignSystem`, `Theme.Colors.*`, `.cardStyle()`)**, `SwiftAnthropic`, `swift-argument-parser`. If either local checkout is missing, nothing builds.
+- `Tuist/Package.swift` declares dependencies: **`~/Development/OSS/ZohoBooksClient` (local checkout — required; own `CODE_REVIEW.md`)**, **`~/Development/LF/DesignSystem` (local sibling checkout — required; the shared Lucky Frog design tokens: `import DesignSystem`, `Theme.Colors.*`, `.cardStyle()`)**, `SwiftAnthropic`, `swift-argument-parser`. If either local checkout is missing, nothing builds.
 - Tuist installs via mise (`.mise.toml`). Tuist Cloud was deliberately removed to save money — don't reintroduce `fullHandle` in `Tuist.swift`.
 - `Tuist.swift` pins `compatibleXcodeVersions: .upToNextMajor("27.0")`, Swift 6.0 (strict concurrency is in force — see conventions).
 
