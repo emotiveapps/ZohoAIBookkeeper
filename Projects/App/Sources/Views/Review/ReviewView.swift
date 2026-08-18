@@ -12,6 +12,7 @@ struct ReviewView: View {
     @State private var session: ReviewSession?
     @State private var activeSheet: EditorSheet?
     @State private var showQueueList = false
+    @State private var showDeleteConfirmation = false
 
     enum EditorSheet: Identifiable {
         case category
@@ -118,6 +119,14 @@ struct ReviewView: View {
                 Task { await session.jump(to: index) }
             }
         }
+        .alert("Delete this transaction?", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                Task { await session.delete() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("It will be excluded in Zoho Books. You can restore it there under the Excluded filter.")
+        }
     }
 
     @ViewBuilder
@@ -201,7 +210,9 @@ struct ReviewView: View {
             }
             .decisionRow()
 
-            if draft.selectedType == .expense {
+            // Refund writes back against an expense category, so it needs the
+            // same category + vendor pickers as an expense.
+            if draft.selectedType == .expense || draft.selectedType == .refund {
                 Divider()
                 Button {
                     activeSheet = .category
@@ -317,13 +328,13 @@ struct ReviewView: View {
             .disabled(!session.canGoForward || session.isSaving)
 
             Button(role: .destructive) {
-                Task { await session.delete() }
+                showDeleteConfirmation = true
             } label: {
-                Text("Delete")
-                    .frame(maxWidth: .infinity)
+                Image(systemName: "trash")
             }
             .buttonStyle(.glass)
             .tint(Theme.Colors.error)
+            .accessibilityLabel("Delete transaction")
             .disabled(session.draft == nil || session.isSaving || session.isPreparing)
 
             Button {

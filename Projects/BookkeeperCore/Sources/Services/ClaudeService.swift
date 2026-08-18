@@ -98,7 +98,7 @@ public actor ClaudeService {
         You are a bookkeeping assistant helping categorize bank transactions for a small business.
 
         Your task is to analyze each transaction and suggest:
-        1. Transaction type (expense, transfer, owner_contribution, sale, or skip)
+        1. Transaction type (expense, transfer, owner_contribution, sale, refund, or skip)
         2. Vendor name (clean, standardized name)
         3. Expense category from the available list
         4. A brief description
@@ -111,7 +111,7 @@ public actor ClaudeService {
 
         Respond ONLY in this exact JSON format:
         {
-          "transaction_type": "expense|transfer|owner_contribution|sale|skip",
+          "transaction_type": "expense|transfer|owner_contribution|sale|refund|skip",
           "vendor_name": "Clean Vendor Name",
           "category": "Category Name",
           "description": "Brief description",
@@ -125,6 +125,8 @@ public actor ClaudeService {
         - For expenses: Match common vendor patterns (Amazon = Office Supplies or Cost of Goods Sold, etc.)
         - For owner contributions: Personal deposits, shareholder loans
         - For sales: Customer payments, revenue deposits
+        - For refunds: money a vendor returned (merchant credits, returned purchases, airline \
+        refunds) — set category to the expense category the original purchase would use
         - Use "skip" for unclear transactions that need manual review
         - Confidence should be 0-100 based on how certain you are
         - Always provide a clean, standardized vendor name (e.g., "AMAZON.COM*123456" -> "Amazon")

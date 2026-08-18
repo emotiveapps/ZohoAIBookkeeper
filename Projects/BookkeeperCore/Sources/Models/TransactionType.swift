@@ -20,14 +20,16 @@ public enum TransactionType: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    /// Transaction types available for debit transactions
+    /// Transaction types available when money leaves the user's pocket
     public static var debitTypes: [TransactionType] {
-        [.expense, .transfer, .refund, .skip]
+        [.expense, .transfer, .skip]
     }
 
-    /// Transaction types available for credit transactions
+    /// Transaction types available when money comes back to the user —
+    /// including refunds, which are returned expenses (on a credit card,
+    /// Zoho reports these as debits because they reduce the liability)
     public static var creditTypes: [TransactionType] {
-        [.sale, .transfer, .ownerContribution, .skip]
+        [.sale, .refund, .transfer, .ownerContribution, .skip]
     }
 
     /// Returns the appropriate transaction types based on the transaction's debit/credit flag

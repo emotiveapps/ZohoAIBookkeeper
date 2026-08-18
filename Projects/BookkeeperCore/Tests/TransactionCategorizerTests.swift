@@ -27,13 +27,11 @@ struct TransactionCategorizerTests {
         return draft
     }
 
-    @Test("Refund and Skip are refused, not silently accepted (B5)")
+    @Test("Skip is refused, not silently accepted (B5)")
     func refusesNonWritableTypes() async {
         let categorizer = makeCategorizer()
-        for type in [TransactionType.refund, .skip] {
-            await #expect(throws: CategorizationError.self) {
-                try await categorizer.categorize(draft(type: type))
-            }
+        await #expect(throws: CategorizationError.self) {
+            try await categorizer.categorize(draft(type: .skip))
         }
     }
 
@@ -66,7 +64,7 @@ struct TransactionCategorizerTests {
         )
         #expect(CategorizationError.transferTargetMissing.errorDescription?.isEmpty == false)
         #expect(
-            CategorizationError.typeNotCategorizable(.refund).errorDescription?.contains("Refund") == true
+            CategorizationError.typeNotCategorizable(.skip).errorDescription?.contains("Skip") == true
         )
     }
 }

@@ -25,10 +25,9 @@ public struct TransactionCategorizer: Sendable {
 
     /// Writes the transaction's selected categorization to Zoho Books.
     ///
-    /// Only `.expense`, `.transfer`, `.ownerContribution`, and `.sale` are writable;
-    /// `.skip` and `.refund` throw `CategorizationError.typeNotCategorizable` — callers
-    /// must handle those types locally (mark skipped / show an error) instead of
-    /// pretending they were saved.
+    /// Everything except `.skip` is writable; `.skip` throws
+    /// `CategorizationError.typeNotCategorizable` — callers must handle it
+    /// locally (mark skipped) instead of pretending it was saved.
     ///
     /// - Returns: the vendor name that was created/attached, if any (for cache updates).
     @discardableResult
@@ -96,7 +95,29 @@ public struct TransactionCategorizer: Sendable {
             try await client.categorizeAsSale(transactionId: tx.transactionId, request: request)
             return nil
 
-        case .refund, .skip:
+        case .refund:
+            var vendorId: String?
+            var attachedVendorName: String?
+            if !transaction.vendorName.isEmpty {
+                let vendor = try await client.getOrCreateVendor(name: transaction.vendorName)
+                vendorId = vendor.contactId
+                attachedVendorName = transaction.vendorName
+            }
+
+            // The category names the expense account the money comes back to.
+            let categoryAccount = try await requireAccount(named: transaction.category)
+
+            let request = ZBCategorizeExpenseRefundRequest(
+                accountId: categoryAccount,
+                vendorId: vendorId,
+                date: tx.date,
+                amount: tx.amount,
+                description: transaction.description
+            )
+            try await client.categorizeAsExpenseRefund(transactionId: tx.transactionId, request: request)
+            return attachedVendorName
+
+        case .skip:
             throw CategorizationError.typeNotCategorizable(transaction.selectedType)
         }
     }
