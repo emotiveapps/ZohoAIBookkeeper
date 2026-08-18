@@ -240,23 +240,29 @@ struct ReviewView: View {
         }
         .background(Theme.Colors.card, in: RoundedRectangle(cornerRadius: Theme.Radius.medium))
         .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .category:
-                CategoryPickerSheet(
-                    categoryConfigs: workspace.categoryConfigs,
-                    flatCategories: workspace.categories,
-                    selection: draft.category
-                ) { selected in
-                    session.draft?.category = selected
-                }
-            case .vendor:
-                VendorPickerSheet(
-                    vendors: workspace.vendors,
-                    selection: draft.vendorName
-                ) { selected in
-                    session.draft?.vendorName = selected
+            Group {
+                switch sheet {
+                case .category:
+                    CategoryPickerSheet(
+                        categoryConfigs: workspace.categoryConfigs,
+                        flatCategories: workspace.categories,
+                        selection: draft.category
+                    ) { selected in
+                        session.draft?.category = selected
+                    }
+                case .vendor:
+                    VendorPickerSheet(
+                        vendors: workspace.vendors,
+                        selection: draft.vendorName
+                    ) { selected in
+                        session.draft?.vendorName = selected
+                    }
                 }
             }
+            // Medium detent first: the picker floats over the visible review
+            // screen (the system's glassy partial-sheet treatment); drag to
+            // large for the full list, where the sheet turns opaque.
+            .presentationDetents([.medium, .large])
         }
     }
 
