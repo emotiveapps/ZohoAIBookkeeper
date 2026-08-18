@@ -63,8 +63,10 @@ public actor HistoryMatcher {
 
         // Same-amount charges are the strongest signal: one vendor's recurring
         // subscriptions (Apple One vs. AppleCare) differ by amount, not name.
+        // Zoho's expense list populates `total` but leaves `amount` null, so
+        // compare against whichever is present.
         let amountMatched = expenses.filter { expense in
-            guard let expenseAmount = expense.amount else { return false }
+            guard let expenseAmount = expense.total ?? expense.amount else { return false }
             return abs(expenseAmount - transaction.amount) < 0.01
         }
 
@@ -88,13 +90,27 @@ public actor HistoryMatcher {
             overrideCategory = topCategory
         }
 
-        // For description, use amount-matched expenses for more relevant matches
+        // Description: reuse what a same-amount expense was called before.
+        // Past saves that kept the raw feed text carry no information (they're
+        // exactly the string being improved), so they don't get a vote. The
+        // rest are grouped fuzzily so wording drift like "Theft and Loss" vs
+        // "Theft & Loss" still clusters, with recency breaking ties.
         var overrideDescription = suggestion.description
-        if !amountMatched.isEmpty {
-            let described = amountMatched.compactMap { $0.description }
-            let descCounts = countOccurrences(described)
-            if let (topDesc, count) = descCounts.first, count > described.count / 2 {
-                overrideDescription = topDesc
+        let rawKey = transaction.description.flatMap { DescriptionNormalizer.key($0) }
+        let informative = amountMatched.compactMap { expense -> (key: String, date: String, text: String)? in
+            guard let text = expense.description,
+                  let key = DescriptionNormalizer.key(text),
+                  key != rawKey else { return nil }
+            return (key: key, date: expense.date ?? "", text: text)
+        }
+        if !informative.isEmpty {
+            let groups = Dictionary(grouping: informative, by: \.key)
+            let winner = groups.values.max { lhs, rhs in
+                if lhs.count != rhs.count { return lhs.count < rhs.count }
+                return (lhs.map(\.date).max() ?? "") < (rhs.map(\.date).max() ?? "")
+            }
+            if let latest = winner?.max(by: { $0.date < $1.date }) {
+                overrideDescription = latest.text
             }
         }
 

@@ -26,12 +26,24 @@ private actor StubHistorySource: VendorHistorySource {
     }
 }
 
-private func expense(category: String?, amount: Double = 10, description: String? = nil) -> ZBExpense {
-    ZBExpense(accountName: category, amount: amount, description: description)
+private func expense(
+    category: String?, amount: Double = 10, description: String? = nil, date: String? = nil
+) -> ZBExpense {
+    ZBExpense(accountName: category, date: date, amount: amount, description: description)
 }
 
-private func transaction(amount: Double = 10) -> ZBBankTransaction {
-    ZBBankTransaction(transactionId: "tx1", date: "2026-08-01", amount: amount, debitOrCredit: "debit")
+/// Shaped like Zoho's live expense list: `total` populated, `amount` null.
+private func listedExpense(
+    category: String?, total: Double, description: String? = nil, date: String? = nil
+) -> ZBExpense {
+    ZBExpense(accountName: category, date: date, total: total, description: description)
+}
+
+private func transaction(amount: Double = 10, description: String? = nil) -> ZBBankTransaction {
+    ZBBankTransaction(
+        transactionId: "tx1", date: "2026-08-01", amount: amount,
+        debitOrCredit: "debit", description: description
+    )
 }
 
 private func expenseSuggestion(vendor: String? = "Acme", category: String = "Software") -> TransactionSuggestion {
@@ -58,6 +70,48 @@ struct HistoryMatcherTests {
         )
         #expect(result.suggestion.category == "Office Supplies")
         #expect(result.suggestion.confidence == 98)
+    }
+
+    @Test("Live-API expenses (total set, amount null) still amount-match; raw feed text doesn't win the description vote")
+    func appleOneScenario() async throws {
+        // Real-world shape: three early saves kept the raw feed text, one has
+        // a human description. The raw text must not outvote it, and matching
+        // must work off `total` because the list endpoint leaves `amount` null.
+        let source = StubHistorySource(
+            vendorIds: ["Apple": "v1"],
+            expensesByVendor: ["v1": [
+                listedExpense(category: "Online Services", total: 39.73, description: "APPLE.COM/BILL", date: "2025-08-31"),
+                listedExpense(category: "Online Services", total: 39.73, description: "APPLE.COM/BILL", date: "2025-10-31"),
+                listedExpense(category: "Online Services", total: 39.73, description: "APPLE.COM/BILL", date: "2025-12-01"),
+                listedExpense(category: "Online Services", total: 39.73, description: "Apple One Premier (monthly)", date: "2026-07-01"),
+                listedExpense(category: "Hardware", total: 13.49, description: "AppleCare+ with Theft and Loss", date: "2026-06-07")
+            ]]
+        )
+        let result = try await HistoryMatcher().refine(
+            suggestion: expenseSuggestion(vendor: "Apple", category: "Software"),
+            transaction: transaction(amount: 39.73, description: "APPLE.COM/BILL"),
+            source: source
+        )
+        #expect(result.suggestion.category == "Online Services")
+        #expect(result.suggestion.description == "Apple One Premier (monthly)")
+    }
+
+    @Test("Description wording drift clusters together; ties resolve to the most recent")
+    func fuzzyDescriptionTieBreak() async throws {
+        let source = StubHistorySource(
+            vendorIds: ["Apple": "v1"],
+            expensesByVendor: ["v1": [
+                listedExpense(category: "Hardware", total: 13.49, description: "AppleCare+ with Theft and Loss", date: "2026-06-07"),
+                listedExpense(category: "Hardware", total: 13.49, description: "AppleCare+ with Theft & Loss", date: "2026-07-07")
+            ]]
+        )
+        let result = try await HistoryMatcher().refine(
+            suggestion: expenseSuggestion(vendor: "Apple", category: "Software"),
+            transaction: transaction(amount: 13.49, description: "APPLE.COM/BILL"),
+            source: source
+        )
+        #expect(result.suggestion.category == "Hardware")
+        #expect(result.suggestion.description == "AppleCare+ with Theft & Loss")
     }
 
     @Test("Same-amount history wins the category vote over the vendor-wide majority")
