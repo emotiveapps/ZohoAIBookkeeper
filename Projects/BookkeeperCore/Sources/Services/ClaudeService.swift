@@ -133,6 +133,10 @@ public actor ClaudeService {
         - Use "skip" for unclear transactions that need manual review
         - Confidence should be 0-100 based on how certain you are
         - Always provide a clean, standardized vendor name (e.g., "AMAZON.COM*123456" -> "Amazon")
+        - The vendor must be a real counterparty, never a description of the charge: for interest, \
+        card fees, and bank fees the vendor is the financial institution behind the account \
+        (e.g. interest on a Chase card -> "Chase"). Do NOT use pseudo-vendors like \
+        "Credit Card Interest" or "Bank Fee" even if they appear in the existing vendor list
         - Inventory bought for resale (e.g., LEGO sets from LEGO, toy stores, or brick marketplaces) \
         is an asset purchase, not a period expense: when an Inventory/COGS category is available, \
         categorize such purchases there (transaction_type stays "expense")
@@ -153,7 +157,8 @@ public actor ClaudeService {
         Amount: \(transaction.displayAmount) (\(directionLabel))
         Description: \(transaction.description ?? "N/A")
         Payee: \(transaction.payee ?? "N/A")
-        Reference: \(transaction.referenceNumber ?? "N/A")\(accountNote)
+        Reference: \(transaction.referenceNumber ?? "N/A")
+        Account: \(transaction.accountName ?? "N/A")\(accountNote)
 
         Existing vendors in the system (for matching):
         \(vendorList.isEmpty ? "None yet" : vendorList)
