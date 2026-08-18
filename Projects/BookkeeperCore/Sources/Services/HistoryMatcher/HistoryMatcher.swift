@@ -61,15 +61,28 @@ public actor HistoryMatcher {
             return HistoryMatchResult(suggestion: suggestion, debugLines: debugLines)
         }
 
-        // Show category breakdown
-        let categorized = expenses.compactMap { $0.accountName }
+        // Same-amount charges are the strongest signal: one vendor's recurring
+        // subscriptions (Apple One vs. AppleCare) differ by amount, not name.
+        let amountMatched = expenses.filter { expense in
+            guard let expenseAmount = expense.amount else { return false }
+            return abs(expenseAmount - transaction.amount) < 0.01
+        }
+
+        // Category vote: same-amount expenses when any of them are categorized,
+        // otherwise the vendor's whole history. Expenses with no account name
+        // never dilute the vote.
+        var categorized = amountMatched.compactMap { $0.accountName }
+        if categorized.isEmpty {
+            categorized = expenses.compactMap { $0.accountName }
+        } else {
+            debugLines.append("  voting on \(amountMatched.count) same-amount expense(s)")
+        }
         let categoryCounts = countOccurrences(categorized)
         for (category, count) in categoryCounts {
             debugLines.append("  \(category): \(count)x")
         }
 
-        // Override category if a majority of the *categorized* expenses share one
-        // (expenses with no account name shouldn't dilute the vote).
+        // Override category if a majority of the voting pool share one.
         var overrideCategory = suggestion.category
         if let (topCategory, count) = categoryCounts.first, count > categorized.count / 2 {
             overrideCategory = topCategory
@@ -77,10 +90,6 @@ public actor HistoryMatcher {
 
         // For description, use amount-matched expenses for more relevant matches
         var overrideDescription = suggestion.description
-        let amountMatched = expenses.filter { expense in
-            guard let expenseAmount = expense.amount else { return false }
-            return abs(expenseAmount - transaction.amount) < 0.01
-        }
         if !amountMatched.isEmpty {
             let described = amountMatched.compactMap { $0.description }
             let descCounts = countOccurrences(described)

@@ -60,6 +60,48 @@ struct HistoryMatcherTests {
         #expect(result.suggestion.confidence == 98)
     }
 
+    @Test("Same-amount history wins the category vote over the vendor-wide majority")
+    func amountScopedCategoryVote() async throws {
+        // Apple-style vendor: many $38 Apple One charges vs. a few $13.49
+        // AppleCare charges — a $13.49 transaction must refine to the
+        // AppleCare category even though Subscriptions wins vendor-wide.
+        let source = StubHistorySource(
+            vendorIds: ["Apple": "v1"],
+            expensesByVendor: ["v1": [
+                expense(category: "Subscriptions", amount: 38),
+                expense(category: "Subscriptions", amount: 38),
+                expense(category: "Subscriptions", amount: 38),
+                expense(category: "Subscriptions", amount: 38),
+                expense(category: "Insurance", amount: 13.49),
+                expense(category: "Insurance", amount: 13.49)
+            ]]
+        )
+        let result = try await HistoryMatcher().refine(
+            suggestion: expenseSuggestion(vendor: "Apple", category: "Software"),
+            transaction: transaction(amount: 13.49),
+            source: source
+        )
+        #expect(result.suggestion.category == "Insurance")
+    }
+
+    @Test("With no same-amount history, the vendor-wide vote still applies")
+    func amountFallbackToVendorWideVote() async throws {
+        let source = StubHistorySource(
+            vendorIds: ["Apple": "v1"],
+            expensesByVendor: ["v1": [
+                expense(category: "Subscriptions", amount: 38),
+                expense(category: "Subscriptions", amount: 38),
+                expense(category: "Insurance", amount: 13.49)
+            ]]
+        )
+        let result = try await HistoryMatcher().refine(
+            suggestion: expenseSuggestion(vendor: "Apple", category: "Software"),
+            transaction: transaction(amount: 99.99),
+            source: source
+        )
+        #expect(result.suggestion.category == "Subscriptions")
+    }
+
     @Test("An even split does not override (no majority)")
     func evenSplitKeepsAISuggestion() async throws {
         let source = StubHistorySource(
