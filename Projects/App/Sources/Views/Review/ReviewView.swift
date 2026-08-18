@@ -250,8 +250,13 @@ struct ReviewView: View {
 
             if draft.selectedType == .transfer {
                 Divider()
+                // Money-out (credit-card aware): the picked account is where it
+                // went; money-in: where it came from.
                 Picker(
-                    draft.transaction.isDebit ? "To account" : "From account",
+                    TransactionType.isUserExpense(
+                        isDebit: draft.transaction.isDebit,
+                        accountType: account.accountType
+                    ) ? "To account" : "From account",
                     selection: binding(session, draft, \.transferToAccountId)
                 ) {
                     Text("Choose…").tag(nil as String?)

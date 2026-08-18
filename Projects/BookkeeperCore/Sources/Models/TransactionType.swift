@@ -32,19 +32,23 @@ public enum TransactionType: String, CaseIterable, Codable, Sendable {
         [.sale, .refund, .transfer, .ownerContribution, .skip]
     }
 
-    /// Returns the appropriate transaction types based on the transaction's debit/credit flag
-    /// and the account type. Credit card accounts have inverted semantics:
-    /// a "credit" on a credit card is an expense (purchase), not income.
+    /// Returns the appropriate transaction types based on the transaction's
+    /// debit/credit flag.
     public static func availableTypes(isDebit: Bool, accountType: String) -> [TransactionType] {
-        let isCreditCard = accountType.lowercased() == "credit_card"
-        let isUserExpense = isCreditCard ? !isDebit : isDebit
-        return isUserExpense ? debitTypes : creditTypes
+        isUserExpense(isDebit: isDebit, accountType: accountType) ? debitTypes : creditTypes
     }
 
-    /// Whether a transaction represents an expense from the user's perspective,
-    /// accounting for credit card semantics.
+    /// Whether a transaction represents money leaving the user's pocket.
+    ///
+    /// Zoho reports `debit_or_credit` in ledger terms for *every* account
+    /// type: debit = money arriving (asset increase on a bank account,
+    /// liability decrease on a credit card), credit = money leaving. Verified
+    /// against live data on both account types (Aug 2026): Stripe payouts and
+    /// owner contributions into Checking are debits; card payments out of
+    /// Checking and purchases on cards are credits. So the answer is simply
+    /// `!isDebit`; `accountType` is kept for callers and in case a future
+    /// Zoho surface isn't uniform.
     public static func isUserExpense(isDebit: Bool, accountType: String) -> Bool {
-        let isCreditCard = accountType.lowercased() == "credit_card"
-        return isCreditCard ? !isDebit : isDebit
+        !isDebit
     }
 }

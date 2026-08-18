@@ -110,20 +110,24 @@ struct ConfigurationTests {
     }
 }
 
-@Suite("Credit-card semantics")
-struct CreditCardSemanticsTests {
+@Suite("Ledger semantics")
+struct LedgerSemanticsTests {
 
-    @Test("On credit cards, credits are user expenses")
+    // Zoho reports debit_or_credit in ledger terms for every account type:
+    // credit = money leaving the user's pocket, debit = money arriving
+    // (verified against live org data on both bank and credit_card accounts).
+
+    @Test("On credit cards, credits (purchases) are user expenses")
     func creditCardCredits() {
         #expect(TransactionType.isUserExpense(isDebit: false, accountType: "credit_card"))
         #expect(!TransactionType.isUserExpense(isDebit: true, accountType: "credit_card"))
         #expect(TransactionType.availableTypes(isDebit: false, accountType: "credit_card") == TransactionType.debitTypes)
     }
 
-    @Test("On bank accounts, debits are user expenses")
-    func bankDebits() {
-        #expect(TransactionType.isUserExpense(isDebit: true, accountType: "bank"))
-        #expect(!TransactionType.isUserExpense(isDebit: false, accountType: "bank"))
-        #expect(TransactionType.availableTypes(isDebit: false, accountType: "bank") == TransactionType.creditTypes)
+    @Test("On bank accounts, credits (withdrawals) are user expenses too")
+    func bankCredits() {
+        #expect(TransactionType.isUserExpense(isDebit: false, accountType: "bank"))
+        #expect(!TransactionType.isUserExpense(isDebit: true, accountType: "bank"))
+        #expect(TransactionType.availableTypes(isDebit: true, accountType: "bank") == TransactionType.creditTypes)
     }
 }

@@ -64,11 +64,17 @@ public struct TransactionCategorizer: Sendable {
             guard let ownAccountId = tx.accountId, !ownAccountId.isEmpty else {
                 throw CategorizationError.transferSourceMissing
             }
-            // Zoho requires both endpoints of the transfer plus the date. A debit
-            // is money leaving this account; a credit is money arriving into it.
+            // Zoho requires both endpoints of the transfer plus the date.
+            // Direction must respect credit-card inversion: on a credit card a
+            // debit is money arriving (it reduces the liability), the opposite
+            // of a bank account.
+            let moneyOut = TransactionType.isUserExpense(
+                isDebit: tx.isDebit,
+                accountType: tx.accountType ?? "bank"
+            )
             let request = ZBCategorizeTransferRequest(
-                toAccountId: tx.isDebit ? otherAccountId : ownAccountId,
-                fromAccountId: tx.isDebit ? ownAccountId : otherAccountId,
+                toAccountId: moneyOut ? otherAccountId : ownAccountId,
+                fromAccountId: moneyOut ? ownAccountId : otherAccountId,
                 amount: tx.amount,
                 date: tx.date,
                 referenceNumber: tx.referenceNumber,
