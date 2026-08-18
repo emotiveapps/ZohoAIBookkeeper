@@ -8,7 +8,7 @@ struct RootView: View {
         Group {
             switch model.phase {
             case .loading:
-                ProgressView("Connecting…")
+                SplashView()
             case .needsSetup:
                 SetupView()
             case .ready(let workspace):
