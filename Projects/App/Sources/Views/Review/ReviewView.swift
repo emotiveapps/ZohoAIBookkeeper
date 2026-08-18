@@ -270,10 +270,16 @@ struct ReviewView: View {
 
             if let error = session.errorMessage {
                 Divider()
-                Label(error, systemImage: "exclamationmark.triangle.fill")
-                    .font(.callout)
-                    .foregroundStyle(Theme.Colors.error)
-                    .decisionRow()
+                HStack(alignment: .top, spacing: 8) {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundStyle(Theme.Colors.error)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    CopyButton(text: error, accessibilityLabel: "Copy error message")
+                        .padding(.top, 2)
+                }
+                .decisionRow()
             }
         }
         .background(Theme.Colors.card, in: RoundedRectangle(cornerRadius: Theme.Radius.medium))

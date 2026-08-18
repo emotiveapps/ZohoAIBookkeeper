@@ -19,6 +19,12 @@ struct TransactionHeaderCard: View {
                 Text(transaction.displayAmount)
                     .font(Theme.Typography.amount)
                     .foregroundStyle(isExpense ? Theme.Colors.textPrimary : Theme.Colors.success)
+                // Copies the bare number ("5.60") — matches both "$5.60" and
+                // "5.60" when searching email for the receipt.
+                CopyButton(
+                    text: String(format: "%.2f", transaction.amount),
+                    accessibilityLabel: "Copy amount"
+                )
                 Spacer()
                 Text(transaction.date)
                     .font(.subheadline)
