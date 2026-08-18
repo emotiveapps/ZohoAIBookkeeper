@@ -291,7 +291,14 @@ struct ReviewView: View {
         .disabled(session.draft == nil || session.isSaving || session.isPreparing)
         .padding(.horizontal)
         .padding(.vertical, 10)
-        .background(.bar)
+        // Card surface, not the system .bar material — the bar should match
+        // the other panels instead of showing a gray translucent blur.
+        .background(Theme.Colors.card)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Theme.Colors.accent.opacity(0.08))
+                .frame(height: 1)
+        }
     }
 
     private var transferTargets: [ZBBankAccount] {
