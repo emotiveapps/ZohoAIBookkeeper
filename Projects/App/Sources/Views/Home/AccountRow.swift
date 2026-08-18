@@ -35,7 +35,7 @@ struct AccountRow: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 4)
-                    .background(Theme.Colors.accent, in: Capsule())
+                    .glassEffect(.regular.tint(Theme.Colors.accent), in: .capsule)
             } else if pendingCount == 0 {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Theme.Colors.success)

@@ -16,7 +16,7 @@ struct ConfidenceBadge: View {
             .font(.caption.weight(.bold))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(color.opacity(0.15), in: Capsule())
             .foregroundStyle(color)
+            .glassEffect(.regular.tint(color.opacity(0.2)), in: .capsule)
     }
 }

@@ -5,7 +5,7 @@ import ProjectDescription
 public enum Constants {
     public static let organizationName = "com.emotiveapps"
     public static let developmentTeam = "M7T8YXH895"
-    public static let iOSVersion = "17.0"
+    public static let iOSVersion = "26.0"
     public static let macOSVersion = "14.0"
     public static let watchOSVersion = "10.0"
 
