@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var showingSyncQuotaWarning = false
     @State private var didSendWatchCount = false
     @State private var showingMicrosoftSignIn = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack {
@@ -37,7 +38,9 @@ struct SettingsView: View {
                         Button("Sign In to Microsoft…") {
                             showingMicrosoftSignIn = true
                         }
-                        .sheet(isPresented: $showingMicrosoftSignIn) {
+                        .sheet(isPresented: $showingMicrosoftSignIn, onDismiss: {
+                            workspace.refreshMicrosoftHealth()
+                        }) {
                             MicrosoftSignInSheet(graph: graph)
                         }
                     }
@@ -50,6 +53,7 @@ struct SettingsView: View {
                     Text("Zoho and Anthropic API keys.")
                 }
                 .task {
+                    workspace.refreshMicrosoftHealth()
                     await workspace.checkAnthropicHealth()
                 }
 
@@ -65,6 +69,11 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    workspace.refreshMicrosoftHealth()
                 }
             }
         }

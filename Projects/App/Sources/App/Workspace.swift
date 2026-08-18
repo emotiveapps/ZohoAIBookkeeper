@@ -112,7 +112,9 @@ public final class Workspace {
         )
         let client = ZohoBooksClient(config: zohoConfig, verbose: false)
         await client.configure()
-        return Workspace(configuration: configuration, client: client)
+        let workspace = Workspace(configuration: configuration, client: client)
+        workspace.refreshMicrosoftHealth()
+        return workspace
     }
 
     /// Load accounts, categories, vendors, pending counts, and cache stats.
@@ -209,21 +211,24 @@ public final class Workspace {
         }
     }
 
-    /// Token presence on *this device* — Graph sign-in happens via the Mac CLI,
-    /// so these are expected to be unavailable on iPhone until in-app sign-in exists.
-    public var mailboxHealth: ServiceHealth {
-        guard let mailbox = configuration.receipts?.mailboxes.first else { return .notConfigured }
-        return GraphTokenStore(mailbox: mailbox).load() != nil
-            ? .ok
-            : .unavailable("Not signed in on this device")
-    }
+    /// Microsoft token presence on *this device*. Stored (not computed) so
+    /// the UI actually re-renders when sign-in completes: Observation can't
+    /// see Keychain writes, so callers refresh explicitly — on Settings
+    /// appearance, when the sign-in sheet closes, and on app foreground.
+    public private(set) var mailboxHealth: ServiceHealth = .notConfigured
+    public private(set) var oneDriveHealth: ServiceHealth = .notConfigured
 
-    public var oneDriveHealth: ServiceHealth {
-        guard configuration.receipts?.onedrive != nil,
-              let mailbox = configuration.receipts?.mailboxes.first else { return .notConfigured }
-        return GraphTokenStore(mailbox: mailbox).load() != nil
-            ? .ok
-            : .unavailable("Not signed in on this device")
+    public func refreshMicrosoftHealth() {
+        guard let mailbox = configuration.receipts?.mailboxes.first else {
+            mailboxHealth = .notConfigured
+            oneDriveHealth = .notConfigured
+            return
+        }
+        let signedIn = GraphTokenStore(mailbox: mailbox).load() != nil
+        mailboxHealth = signedIn ? .ok : .unavailable("Not signed in on this device")
+        oneDriveHealth = configuration.receipts?.onedrive == nil
+            ? .notConfigured
+            : (signedIn ? .ok : .unavailable("Not signed in on this device"))
     }
 
     // MARK: - Manual receipt sync (Settings → Maintenance)

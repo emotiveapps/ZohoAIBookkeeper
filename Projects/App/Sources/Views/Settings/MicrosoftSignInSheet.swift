@@ -12,6 +12,7 @@ struct MicrosoftSignInSheet: View {
     @State private var code: MicrosoftGraphMailClient.DeviceCode?
     @State private var errorMessage: String?
     @State private var finished = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack {
@@ -76,7 +77,28 @@ struct MicrosoftSignInSheet: View {
                 }
             }
             .task { await run() }
+            // Completing sign-in means a round-trip through the browser; the
+            // app suspends mid-poll and the resumed poll can fail or be
+            // superseded. On every return to foreground, trust the Keychain.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active, !finished {
+                    Task { await checkAlreadySignedIn() }
+                }
+            }
         }
+    }
+
+    private func checkAlreadySignedIn() async {
+        if await graph.isSignedIn {
+            await finishAndDismiss()
+        }
+    }
+
+    private func finishAndDismiss() async {
+        errorMessage = nil
+        finished = true
+        try? await Task.sleep(for: .seconds(1))
+        dismiss()
     }
 
     private func run() async {
@@ -84,11 +106,15 @@ struct MicrosoftSignInSheet: View {
             let deviceCode = try await graph.beginDeviceLogin()
             code = deviceCode
             try await graph.waitForLogin(deviceCode)
-            finished = true
-            try? await Task.sleep(for: .seconds(1))
-            dismiss()
+            await finishAndDismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            // A poll interrupted by backgrounding can throw after the tokens
+            // were already stored — check the Keychain before surfacing.
+            if await graph.isSignedIn {
+                await finishAndDismiss()
+            } else {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }
