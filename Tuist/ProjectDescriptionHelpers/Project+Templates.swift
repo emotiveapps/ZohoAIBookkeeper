@@ -190,8 +190,8 @@ public extension Project {
                 deploymentTargets: Constants.deploymentTargets(for: [.iOS]),
                 infoPlist: .extendingDefault(with: [
                     "UILaunchScreen": [
-                        "UIColorName": "",
-                        "UIImageName": "",
+                        "UIColorName": "LaunchBackground",
+                        "UIImageName": "LaunchLogo",
                     ],
                     "UISupportedInterfaceOrientations": [
                         "UIInterfaceOrientationPortrait",
