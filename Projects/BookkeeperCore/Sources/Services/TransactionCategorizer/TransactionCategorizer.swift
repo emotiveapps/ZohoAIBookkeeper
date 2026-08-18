@@ -83,6 +83,30 @@ public struct TransactionCategorizer: Sendable {
             try await client.categorizeAsTransfer(transactionId: tx.transactionId, request: request)
             return nil
 
+        case .cardPayment:
+            guard let otherAccountId = transaction.transferToAccountId, !otherAccountId.isEmpty else {
+                throw CategorizationError.transferTargetMissing
+            }
+            guard let ownAccountId = tx.accountId, !ownAccountId.isEmpty else {
+                throw CategorizationError.transferSourceMissing
+            }
+            // Same orientation rules as a transfer: money-out pays the picked
+            // card; money-in is a payment arriving onto this card.
+            let paymentOut = TransactionType.isUserExpense(
+                isDebit: tx.isDebit,
+                accountType: tx.accountType ?? "bank"
+            )
+            let request = ZBCategorizeCardPaymentRequest(
+                toAccountId: paymentOut ? otherAccountId : ownAccountId,
+                fromAccountId: paymentOut ? ownAccountId : otherAccountId,
+                amount: tx.amount,
+                date: tx.date,
+                referenceNumber: tx.referenceNumber,
+                description: transaction.description
+            )
+            try await client.categorizeAsCardPayment(transactionId: tx.transactionId, request: request)
+            return nil
+
         case .ownerContribution:
             let equityAccountId = try await requireAccount(named: accountNames.ownersEquity)
             let request = ZBCategorizeOwnerContributionRequest(

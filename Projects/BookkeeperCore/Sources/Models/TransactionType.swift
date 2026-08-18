@@ -4,6 +4,7 @@ import Foundation
 public enum TransactionType: String, CaseIterable, Codable, Sendable {
     case expense = "expense"
     case transfer = "transfer_fund"
+    case cardPayment = "card_payment"
     case ownerContribution = "owner_contribution"
     case sale = "sales_without_invoices"
     case refund = "refund"
@@ -13,6 +14,7 @@ public enum TransactionType: String, CaseIterable, Codable, Sendable {
         switch self {
         case .expense: return "Expense"
         case .transfer: return "Transfer"
+        case .cardPayment: return "Card Payment"
         case .ownerContribution: return "Owner Contribution"
         case .sale: return "Sale"
         case .refund: return "Refund"
@@ -20,16 +22,18 @@ public enum TransactionType: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    /// Transaction types available when money leaves the user's pocket
+    /// Transaction types available when money leaves the user's pocket —
+    /// card payment here means paying a card's balance from this account
     public static var debitTypes: [TransactionType] {
-        [.expense, .transfer, .skip]
+        [.expense, .transfer, .cardPayment, .skip]
     }
 
     /// Transaction types available when money comes back to the user —
     /// including refunds, which are returned expenses (on a credit card,
-    /// Zoho reports these as debits because they reduce the liability)
+    /// Zoho reports these as debits because they reduce the liability),
+    /// and card payments arriving onto a card
     public static var creditTypes: [TransactionType] {
-        [.sale, .refund, .transfer, .ownerContribution, .skip]
+        [.sale, .refund, .transfer, .cardPayment, .ownerContribution, .skip]
     }
 
     /// Returns the appropriate transaction types based on the transaction's

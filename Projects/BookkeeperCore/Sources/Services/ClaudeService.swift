@@ -98,7 +98,7 @@ public actor ClaudeService {
         You are a bookkeeping assistant helping categorize bank transactions for a small business.
 
         Your task is to analyze each transaction and suggest:
-        1. Transaction type (expense, transfer, owner_contribution, sale, refund, or skip)
+        1. Transaction type (expense, transfer, card_payment, owner_contribution, sale, refund, or skip)
         2. Vendor name (clean, standardized name)
         3. Expense category from the available list
         4. A brief description
@@ -111,7 +111,7 @@ public actor ClaudeService {
 
         Respond ONLY in this exact JSON format:
         {
-          "transaction_type": "expense|transfer|owner_contribution|sale|refund|skip",
+          "transaction_type": "expense|transfer|card_payment|owner_contribution|sale|refund|skip",
           "vendor_name": "Clean Vendor Name",
           "category": "Category Name",
           "description": "Brief description",
@@ -122,6 +122,9 @@ public actor ClaudeService {
 
         Guidelines:
         - For transfers: Look for keywords like "TRANSFER", bank names, or matches with other account names
+        - For card payments (paying off a credit card, e.g. "Payment Thank You", "AUTOPAY", \
+        "CARD ONLINE PAYMENT"): use card_payment and set transfer_to_account to the other account \
+        involved — the card being paid, or the bank account that paid when the transaction is on the card
         - For expenses: Match common vendor patterns (Amazon = Office Supplies or Cost of Goods Sold, etc.)
         - For owner contributions: Personal deposits, shareholder loans
         - For sales: Customer payments, revenue deposits
@@ -201,6 +204,7 @@ public actor ClaudeService {
             switch parsed.transactionType?.lowercased() {
             case "expense": txType = .expense
             case "transfer", "transfer_fund": txType = .transfer
+            case "card_payment": txType = .cardPayment
             case "owner_contribution": txType = .ownerContribution
             case "sale", "sales_without_invoices": txType = .sale
             case "refund": txType = .refund

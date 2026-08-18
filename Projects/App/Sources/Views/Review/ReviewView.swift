@@ -17,6 +17,7 @@ struct ReviewView: View {
     enum EditorSheet: Identifiable {
         case category
         case vendor
+        case match
 
         var id: Self { self }
     }
@@ -69,7 +70,7 @@ struct ReviewView: View {
             ContentUnavailableView {
                 Label("All caught up", systemImage: "checkmark.seal.fill")
             } description: {
-                if session.savedCount + session.skippedCount + session.deletedCount > 0 {
+                if session.savedCount + session.matchedCount + session.skippedCount + session.deletedCount > 0 {
                     Text(sessionSummary(session))
                 } else {
                     Text("No uncategorized transactions in this account.")
@@ -84,6 +85,7 @@ struct ReviewView: View {
     private func sessionSummary(_ session: ReviewSession) -> String {
         var parts: [String] = []
         if session.savedCount > 0 { parts.append("saved \(session.savedCount)") }
+        if session.matchedCount > 0 { parts.append("matched \(session.matchedCount)") }
         if session.deletedCount > 0 { parts.append("deleted \(session.deletedCount)") }
         if session.skippedCount > 0 { parts.append("skipped \(session.skippedCount)") }
         let joined = parts.joined(separator: ", ")
@@ -197,6 +199,20 @@ struct ReviewView: View {
 
     private func decisionCard(_ session: ReviewSession, draft: CategorizedTransaction) -> some View {
         VStack(spacing: 0) {
+            // Zoho's other resolution path: link this feed line to an
+            // already-recorded transaction instead of creating a new one.
+            Button {
+                activeSheet = .match
+            } label: {
+                Label("Match existing transaction", systemImage: "link")
+                    .font(.callout)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Theme.Colors.accent)
+            .decisionRow()
+
+            Divider()
             HStack {
                 Text("Type")
                 Spacer()
@@ -248,15 +264,16 @@ struct ReviewView: View {
                 .decisionRow()
             }
 
-            if draft.selectedType == .transfer {
+            if draft.selectedType == .transfer || draft.selectedType == .cardPayment {
                 Divider()
-                // Money-out (credit-card aware): the picked account is where it
-                // went; money-in: where it came from.
+                // Money-out: the picked account is where it went; money-in:
+                // where it came from.
                 Picker(
                     TransactionType.isUserExpense(
                         isDebit: draft.transaction.isDebit,
                         accountType: account.accountType
-                    ) ? "To account" : "From account",
+                    ) ? (draft.selectedType == .cardPayment ? "Card paid" : "To account")
+                        : (draft.selectedType == .cardPayment ? "Paid from" : "From account"),
                     selection: binding(session, draft, \.transferToAccountId)
                 ) {
                     Text("Choose…").tag(nil as String?)
@@ -306,6 +323,8 @@ struct ReviewView: View {
                     ) { selected in
                         session.draft?.vendorName = selected
                     }
+                case .match:
+                    MatchSheet(session: session)
                 }
             }
             // Medium detent first: the picker floats over the visible review

@@ -36,6 +36,7 @@ public final class ReviewSession {
     public private(set) var savedCount = 0
     public private(set) var skippedCount = 0
     public private(set) var deletedCount = 0
+    public private(set) var matchedCount = 0
 
     private let workspace: Workspace
     private var prefetchTask: Task<Prepared, Never>?
@@ -180,6 +181,46 @@ public final class ReviewSession {
         }
     }
 
+    /// Zoho's proposed matches for the current transaction (its "Match
+    /// Transactions" flow) — recorded transactions the feed line can be
+    /// linked to instead of creating a new one.
+    public func matchCandidates() async throws -> [ZBMatchingTransaction] {
+        guard let draft else { return [] }
+        return try await workspace.client.fetchMatchingTransactions(
+            transactionId: draft.transaction.transactionId
+        )
+    }
+
+    /// Link the current feed line to an already-recorded transaction.
+    public func match(_ candidate: ZBMatchingTransaction) async {
+        guard let draft, !isSaving else { return }
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+
+        do {
+            try await workspace.client.matchTransaction(
+                transactionId: draft.transaction.transactionId,
+                request: ZBMatchRequest(transactionsToBeMatched: [
+                    .init(
+                        transactionId: candidate.transactionId,
+                        transactionType: candidate.transactionType
+                    )
+                ])
+            )
+            if let cache = workspace.cache {
+                await cache.markProcessed(draft.transaction.transactionId)
+                try? await cache.save()
+            }
+            matchedCount += 1
+            workspace.adjustPendingCount(accountId: account.accountId, by: -1)
+            await workspace.refreshCacheStats()
+            await removeCurrentAndPresentNext()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Navigation
 
     public var canGoBack: Bool { position > 0 }
@@ -296,6 +337,15 @@ public final class ReviewSession {
         )
         if !types.contains(prepared.draft.selectedType) {
             prepared.draft.selectedType = .skip
+        }
+        // Resolve the AI's suggested account name so transfers/card payments
+        // arrive with the picker pre-filled.
+        if prepared.draft.transferToAccountId == nil,
+           let name = prepared.draft.suggestion.transferToAccount {
+            prepared.draft.transferToAccountId = workspace.bankAccounts.first {
+                $0.accountId != account.accountId
+                    && $0.accountName.caseInsensitiveCompare(name) == .orderedSame
+            }?.accountId
         }
         draft = prepared.draft
         historyNotes = prepared.historyNotes
