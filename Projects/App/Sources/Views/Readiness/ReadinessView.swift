@@ -79,7 +79,7 @@ struct ReadinessView: View {
                 Button("Retry") {
                     Task { await model.run(year: year) }
                 }
-                .buttonStyle(.primaryAction)
+                .buttonStyle(.borderedProminent)
             }
 
         case .finished(let report):

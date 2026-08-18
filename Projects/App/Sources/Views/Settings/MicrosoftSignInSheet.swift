@@ -34,7 +34,7 @@ struct MicrosoftSignInSheet: View {
                         code = nil
                         Task { await run() }
                     }
-                    .buttonStyle(.primaryAction)
+                    .buttonStyle(.borderedProminent)
                 } else if let code {
                     Text("Enter this code on the Microsoft sign-in page, using the account with access to the billing mailbox:")
                         .multilineTextAlignment(.center)
@@ -56,7 +56,7 @@ struct MicrosoftSignInSheet: View {
                         Link(destination: url) {
                             Label("Open Sign-In Page", systemImage: "safari")
                         }
-                        .buttonStyle(.primaryAction)
+                        .buttonStyle(.borderedProminent)
                     }
 
                     ProgressView("Waiting for you to finish signing in…")
