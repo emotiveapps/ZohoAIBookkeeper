@@ -276,7 +276,8 @@ public extension Project {
         let targets: [Target] = [
             .target(
                 name: name,
-                destinations: [.iPhone, .iPad],
+                // .macWithiPadDesign: the iPad binary runs on Apple Silicon
+                destinations: [.iPhone, .iPad, .macWithiPadDesign],
                 product: .app,
                 bundleId: "\(Constants.organizationName).\(name)",
                 deploymentTargets: Constants.deploymentTargets(for: [.iOS]),
