@@ -35,6 +35,7 @@ public final class ReviewSession {
     /// Counts for the end-of-queue summary.
     public private(set) var savedCount = 0
     public private(set) var skippedCount = 0
+    public private(set) var deletedCount = 0
 
     private let workspace: Workspace
     private var prefetchTask: Task<Prepared, Never>?
@@ -156,6 +157,27 @@ public final class ReviewSession {
         workspace.adjustPendingCount(accountId: account.accountId, by: -1)
         await workspace.refreshCacheStats()
         await removeCurrentAndPresentNext()
+    }
+
+    /// Exclude the current transaction in Zoho Books (duplicates, noise).
+    /// Zoho keeps it under the Excluded filter, so this is recoverable there.
+    public func delete() async {
+        guard let draft, !isSaving else { return }
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+
+        do {
+            try await workspace.client.excludeTransaction(
+                transactionId: draft.transaction.transactionId
+            )
+            deletedCount += 1
+            workspace.adjustPendingCount(accountId: account.accountId, by: -1)
+            await workspace.refreshCacheStats()
+            await removeCurrentAndPresentNext()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     // MARK: - Navigation

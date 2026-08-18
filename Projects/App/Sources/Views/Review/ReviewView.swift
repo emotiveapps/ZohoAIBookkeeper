@@ -68,8 +68,8 @@ struct ReviewView: View {
             ContentUnavailableView {
                 Label("All caught up", systemImage: "checkmark.seal.fill")
             } description: {
-                if session.savedCount + session.skippedCount > 0 {
-                    Text("Saved \(session.savedCount), skipped \(session.skippedCount) this session.")
+                if session.savedCount + session.skippedCount + session.deletedCount > 0 {
+                    Text(sessionSummary(session))
                 } else {
                     Text("No uncategorized transactions in this account.")
                 }
@@ -78,6 +78,15 @@ struct ReviewView: View {
         case .reviewing:
             reviewer(session)
         }
+    }
+
+    private func sessionSummary(_ session: ReviewSession) -> String {
+        var parts: [String] = []
+        if session.savedCount > 0 { parts.append("saved \(session.savedCount)") }
+        if session.deletedCount > 0 { parts.append("deleted \(session.deletedCount)") }
+        if session.skippedCount > 0 { parts.append("skipped \(session.skippedCount)") }
+        let joined = parts.joined(separator: ", ")
+        return joined.prefix(1).uppercased() + joined.dropFirst() + " this session."
     }
 
     private func reviewer(_ session: ReviewSession) -> some View {
@@ -308,12 +317,13 @@ struct ReviewView: View {
             .disabled(!session.canGoForward || session.isSaving)
 
             Button(role: .destructive) {
-                Task { await session.skip() }
+                Task { await session.delete() }
             } label: {
-                Text("Skip")
+                Text("Delete")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.glass)
+            .tint(Theme.Colors.error)
             .disabled(session.draft == nil || session.isSaving || session.isPreparing)
 
             Button {
