@@ -125,7 +125,10 @@ struct Clean: AsyncParsableCommand {
                 client: client,
                 bankAccounts: bankAccounts,
                 existingVendors: vendorNames,
-                accountType: accountType
+                accountType: accountType,
+                vendorMemory: { description in
+                    await cacheService.vendor(forDescription: description)
+                }
             )
             aiSpinner.stop(message: "Ready")
 
@@ -174,6 +177,9 @@ struct Clean: AsyncParsableCommand {
                         let vendorUsed = try await categorizer.categorize(editedTx)
                         if let vendorUsed {
                             await cacheService.addVendor(vendorUsed)
+                            if let rawDescription = transaction.description {
+                                await cacheService.rememberVendor(vendorUsed, forDescription: rawDescription)
+                            }
                         }
                         spinner.stop(message: "Saved!")
                         processedCount += 1

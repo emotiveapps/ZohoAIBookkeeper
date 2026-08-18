@@ -133,6 +133,9 @@ public final class ReviewSession {
                 await cache.markProcessed(draft.transaction.transactionId)
                 if let vendorUsed {
                     await cache.addVendor(vendorUsed)
+                    if let rawDescription = draft.transaction.description {
+                        await cache.rememberVendor(vendorUsed, forDescription: rawDescription)
+                    }
                 }
                 try? await cache.save()
             }
@@ -359,7 +362,10 @@ public final class ReviewSession {
                 client: workspace.client,
                 bankAccounts: workspace.bankAccounts,
                 existingVendors: workspace.vendors,
-                accountType: account.accountType
+                accountType: account.accountType,
+                vendorMemory: { [weak workspace] description in
+                    await workspace?.cache?.vendor(forDescription: description)
+                }
             )
             return Prepared(
                 draft: CategorizedTransaction(transaction: transaction, suggestion: result.suggestion),

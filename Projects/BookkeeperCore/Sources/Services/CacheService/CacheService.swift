@@ -79,6 +79,20 @@ public actor CacheService {
         Array(cache.knownVendors).sorted()
     }
 
+    /// The vendor the user last saved for a feed line with this description,
+    /// if any.
+    public func vendor(forDescription raw: String) -> String? {
+        guard let key = DescriptionNormalizer.key(raw) else { return nil }
+        return cache.vendorByDescription[key]
+    }
+
+    /// Remember which vendor the user saved for this feed description so
+    /// future suggestions for matching lines start from it.
+    public func rememberVendor(_ vendorName: String, forDescription raw: String) {
+        guard let key = DescriptionNormalizer.key(raw) else { return }
+        cache.vendorByDescription[key] = vendorName
+    }
+
     /// Save the cache to disk
     public func save() throws {
         let cacheFile = cacheDirectory.appendingPathComponent("cache.json")
