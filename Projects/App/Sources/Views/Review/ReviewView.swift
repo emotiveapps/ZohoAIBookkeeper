@@ -11,6 +11,7 @@ struct ReviewView: View {
 
     @State private var session: ReviewSession?
     @State private var activeSheet: EditorSheet?
+    @State private var showQueueList = false
 
     enum EditorSheet: Identifiable {
         case category
@@ -94,6 +95,20 @@ struct ReviewView: View {
             actionBar(session)
         }
         .animation(.default, value: session.isPreparing)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showQueueList = true
+                } label: {
+                    Label("Queue", systemImage: "list.bullet")
+                }
+            }
+        }
+        .sheet(isPresented: $showQueueList) {
+            QueueListSheet(queue: session.queue, position: session.position) { index in
+                Task { await session.jump(to: index) }
+            }
+        }
     }
 
     @ViewBuilder
@@ -215,7 +230,10 @@ struct ReviewView: View {
 
             if draft.selectedType == .transfer {
                 Divider()
-                Picker("To account", selection: binding(session, draft, \.transferToAccountId)) {
+                Picker(
+                    draft.transaction.isDebit ? "To account" : "From account",
+                    selection: binding(session, draft, \.transferToAccountId)
+                ) {
                     Text("Choose…").tag(nil as String?)
                     ForEach(transferTargets, id: \.accountId) { target in
                         Text(target.accountName).tag(target.accountId as String?)
@@ -268,10 +286,26 @@ struct ReviewView: View {
 
     private func actionBar(_ session: ReviewSession) -> some View {
         HStack(spacing: 12) {
+            Button {
+                Task { await session.goBack() }
+            } label: {
+                Image(systemName: "chevron.backward")
+            }
+            .buttonStyle(.glass)
+            .disabled(!session.canGoBack || session.isSaving)
+
             Text("\(min(session.position + 1, session.totalCount)) of \(session.totalCount)")
                 .font(Theme.Typography.counter)
                 .foregroundStyle(Theme.Colors.textSecondary)
-                .frame(minWidth: 56, alignment: .leading)
+                .frame(minWidth: 48)
+
+            Button {
+                Task { await session.goForward() }
+            } label: {
+                Image(systemName: "chevron.forward")
+            }
+            .buttonStyle(.glass)
+            .disabled(!session.canGoForward || session.isSaving)
 
             Button(role: .destructive) {
                 Task { await session.skip() }
@@ -280,6 +314,7 @@ struct ReviewView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.glass)
+            .disabled(session.draft == nil || session.isSaving || session.isPreparing)
 
             Button {
                 Task { await session.save() }
@@ -293,8 +328,8 @@ struct ReviewView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
+            .disabled(session.draft == nil || session.isSaving || session.isPreparing)
         }
-        .disabled(session.draft == nil || session.isSaving || session.isPreparing)
         .padding(.horizontal)
         .padding(.vertical, 10)
         // Liquid Glass controls float over the scrolling content — no opaque

@@ -38,7 +38,13 @@ public final class ReviewSession {
 
     private let workspace: Workspace
     private var prefetchTask: Task<Prepared, Never>?
+    private var prefetchedTransactionId: String?
     private var loadGeneration = 0
+    private var presentGeneration = 0
+
+    /// Drafts (with any user edits) for transactions already visited this
+    /// session, so back/forward navigation is instant and never re-calls Claude.
+    private var preparedByTransactionId: [String: Prepared] = [:]
 
     public init(workspace: Workspace, account: ZBBankAccount) {
         self.workspace = workspace
@@ -134,7 +140,7 @@ public final class ReviewSession {
             savedCount += 1
             workspace.adjustPendingCount(accountId: account.accountId, by: -1)
             await workspace.refreshCacheStats()
-            await advance()
+            await removeCurrentAndPresentNext()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -149,7 +155,28 @@ public final class ReviewSession {
         skippedCount += 1
         workspace.adjustPendingCount(accountId: account.accountId, by: -1)
         await workspace.refreshCacheStats()
-        await advance()
+        await removeCurrentAndPresentNext()
+    }
+
+    // MARK: - Navigation
+
+    public var canGoBack: Bool { position > 0 }
+    public var canGoForward: Bool { position + 1 < queue.count }
+
+    public func goBack() async {
+        guard canGoBack, !isSaving else { return }
+        await present(index: position - 1)
+    }
+
+    public func goForward() async {
+        guard canGoForward, !isSaving else { return }
+        await present(index: position + 1)
+    }
+
+    /// Jump straight to a queue entry (from the queue list sheet).
+    public func jump(to index: Int) async {
+        guard queue.indices.contains(index), index != position, !isSaving else { return }
+        await present(index: index)
     }
 
     // MARK: - Queue mechanics
@@ -159,6 +186,16 @@ public final class ReviewSession {
     }
 
     private func present(index: Int) async {
+        // Keep the outgoing draft (with any user edits) so navigating back is
+        // instant and free.
+        if let draft {
+            preparedByTransactionId[draft.transaction.transactionId] =
+                Prepared(draft: draft, historyNotes: historyNotes)
+        }
+
+        presentGeneration += 1
+        let generation = presentGeneration
+
         position = index
         guard let tx = currentTransaction else {
             state = .finished
@@ -171,28 +208,49 @@ public final class ReviewSession {
         errorMessage = nil
 
         let prepared: Prepared
-        if let prefetchTask {
+        if let cached = preparedByTransactionId[tx.transactionId] {
+            prepared = cached
+        } else if let prefetchTask, prefetchedTransactionId == tx.transactionId {
             prepared = await prefetchTask.value
             self.prefetchTask = nil
+            self.prefetchedTransactionId = nil
         } else {
             prepared = await prepare(tx)
         }
+        // A newer present() superseded this one while we awaited.
+        guard generation == presentGeneration else { return }
         apply(prepared)
         isPreparing = false
 
         prefetchNext()
     }
 
-    private func advance() async {
-        await present(index: position + 1)
+    /// After Save/Skip the record leaves the queue entirely; the next one
+    /// slides into the same position.
+    private func removeCurrentAndPresentNext() async {
+        guard queue.indices.contains(position) else { return }
+        preparedByTransactionId[queue[position].transactionId] = nil
+        queue.remove(at: position)
+        // Clear before present() so the departed record isn't stashed back
+        // into the navigation cache.
+        draft = nil
+        guard !queue.isEmpty else {
+            state = .finished
+            return
+        }
+        await present(index: min(position, queue.count - 1))
     }
 
     private func prefetchNext() {
         prefetchTask?.cancel()
         prefetchTask = nil
+        prefetchedTransactionId = nil
         let nextIndex = position + 1
         guard queue.indices.contains(nextIndex) else { return }
         let next = queue[nextIndex]
+        // Already visited: its draft is cached, nothing to prefetch.
+        guard preparedByTransactionId[next.transactionId] == nil else { return }
+        prefetchedTransactionId = next.transactionId
         prefetchTask = Task { [weak self] in
             guard let self else {
                 return Prepared(
