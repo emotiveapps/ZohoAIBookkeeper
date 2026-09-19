@@ -24,6 +24,8 @@ public actor ReceiptPipeline {
         public var ambiguous = 0
         public var pending = 0
         public var retriedMatches = 0
+        /// Pending receipts the retry budget held back this pass.
+        public var deferredRetries = 0
         public var movedMessages = 0
         public var errors = 0
         public var lines: [String] = []
@@ -35,6 +37,7 @@ public actor ReceiptPipeline {
             ambiguous += other.ambiguous
             pending += other.pending
             retriedMatches += other.retriedMatches
+            deferredRetries += other.deferredRetries
             movedMessages += other.movedMessages
             errors += other.errors
             lines += other.lines
@@ -54,6 +57,12 @@ public actor ReceiptPipeline {
 
     /// Attachments smaller than this are almost always logos/signatures.
     private let minimumImageBytes = 20000
+
+    /// Zoho expense windows already fetched during the current operation, keyed
+    /// by the fetch window. Cleared at the start of every sync and retry pass so
+    /// a long-lived pipeline (the app keeps one) can never match against a stale
+    /// expense list.
+    private var candidateCache: [String: [ZBExpense]] = [:]
 
     public init(
         graph: MicrosoftGraphMailClient? = nil,
@@ -82,6 +91,7 @@ public actor ReceiptPipeline {
         filename: String,
         source: ReceiptRecord.Source
     ) async throws -> (record: ReceiptRecord?, line: String) {
+        candidateCache.removeAll()
         let parsed = try await parser.parse(fileData: data, contentType: contentType, filename: filename)
         guard parsed.confidence > 0 else {
             return (nil, "skip: \(filename) — not a receipt")
@@ -101,19 +111,38 @@ public actor ReceiptPipeline {
         return (record, summary.lines.last ?? "")
     }
 
-    /// Retry matching for all pending receipts (no mailbox needed; emails and
+    /// Retry matching for pending receipts (no mailbox needed; emails and
     /// drive files are promoted when a graph client is available).
-    public func retryPending() async throws -> SyncSummary {
-        await retryPendingInternal(dryRun: false)
+    ///
+    /// - Parameter policy: which pendings to re-check. `.standard` budgets the
+    ///   pass so receipts that will never match stop costing a Zoho fetch every
+    ///   sync; `.exhaustive` re-checks every one, for the catch-up run after a
+    ///   backlog import.
+    public func retryPending(policy: ReceiptRetryPolicy = .standard) async throws -> SyncSummary {
+        await retryPendingInternal(dryRun: false, policy: policy)
     }
 
-    private func retryPendingInternal(dryRun: Bool) async -> SyncSummary {
+    private func retryPendingInternal(dryRun: Bool, policy: ReceiptRetryPolicy) async -> SyncSummary {
         var summary = SyncSummary()
+        candidateCache.removeAll()
+
+        var ledger = ReceiptRetryLedger.load(from: syncState)
+        var ledgerChanged = false
+        let now = Date()
+
         for record in await store.allRecords() where record.status == .pending {
+            guard policy.allows(record, attempts: ledger.attemptCount(for: record.id), now: now) else {
+                summary.deferredRetries += 1
+                continue
+            }
             do {
                 if try await rematch(record, dryRun: dryRun, summary: &summary) {
                     summary.retriedMatches += 1
+                    ledger.clear(for: record.id)
+                } else {
+                    ledger.recordFailure(for: record.id)
                 }
+                ledgerChanged = true
             } catch HttpServiceError.rateLimited {
                 // Zoho quota exhausted: every further record would fail the
                 // same way after long 429 waits — stop and resume next sync.
@@ -125,16 +154,34 @@ public actor ReceiptPipeline {
                 summary.lines.append("error retrying \(record.parsed?.vendor ?? record.id): \(error.localizedDescription)")
             }
         }
+
+        if summary.deferredRetries > 0 {
+            summary.lines.append(
+                "\(summary.deferredRetries) pending receipt(s) outside the retry budget"
+                    + " — run a full retry to include them"
+            )
+        }
+        if ledgerChanged && !dryRun {
+            ledger.save(to: syncState)
+        }
         return summary
     }
 
-    /// - Parameter runRetryPass: set false when the caller orchestrates several
-    ///   syncs (mail + drive) and wants a single hold-&-retry pass at the end
-    ///   instead of one per sync — the retry pass is the API-heavy part.
-    public func sync(dryRun: Bool = false, since: Date? = nil, runRetryPass: Bool = true) async throws -> SyncSummary {
+    /// - Parameters:
+    ///   - runRetryPass: set false when the caller orchestrates several syncs
+    ///     (mail + drive) and wants a single hold-&-retry pass at the end
+    ///     instead of one per sync — the retry pass is the API-heavy part.
+    ///   - retryPolicy: which pendings that pass re-checks, when it runs.
+    public func sync(
+        dryRun: Bool = false,
+        since: Date? = nil,
+        runRetryPass: Bool = true,
+        retryPolicy: ReceiptRetryPolicy = .standard
+    ) async throws -> SyncSummary {
         guard let graph else {
             throw GraphError.notSignedIn(mailbox: "(no mailbox configured for this pipeline)")
         }
+        candidateCache.removeAll()
         var summary = SyncSummary()
         let mailbox = graph.config.address
 
@@ -184,7 +231,7 @@ public actor ReceiptPipeline {
         // Hold & retry: previously unmatched receipts get another look now that
         // new expenses may exist in Zoho. Successful matches promote the email.
         if runRetryPass {
-            let retry = await retryPendingInternal(dryRun: dryRun)
+            let retry = await retryPendingInternal(dryRun: dryRun, policy: retryPolicy)
             summary.merge(retry)
         }
 
@@ -203,10 +250,15 @@ public actor ReceiptPipeline {
     /// file types (scripts, CSVs, zips) are never touched. Files are only
     /// ever moved, never deleted — on the happy path the folder root and its
     /// organizational subfolders end up empty.
-    public func syncDrive(dryRun: Bool = false, runRetryPass: Bool = true) async throws -> SyncSummary {
+    public func syncDrive(
+        dryRun: Bool = false,
+        runRetryPass: Bool = true,
+        retryPolicy: ReceiptRetryPolicy = .standard
+    ) async throws -> SyncSummary {
         guard let graph, let driveFolder else {
             throw GraphError.notSignedIn(mailbox: "(no OneDrive folder configured for this pipeline)")
         }
+        candidateCache.removeAll()
         var summary = SyncSummary()
 
         let stateNames = Set(MailFolder.allCases.map(\.rawValue))
@@ -275,7 +327,7 @@ public actor ReceiptPipeline {
         // Hold & retry, same as the mailbox sync. Promoted receipts get their
         // source (email or drive file) refiled too.
         if runRetryPass {
-            let retry = await retryPendingInternal(dryRun: dryRun)
+            let retry = await retryPendingInternal(dryRun: dryRun, policy: retryPolicy)
             summary.merge(retry)
         }
         return summary
@@ -540,20 +592,54 @@ public actor ReceiptPipeline {
     }
 
     private func matchAgainstZoho(_ parsed: ParsedReceipt) async throws -> ReceiptMatchOutcome {
-        // Candidate window around the receipt date (or a recent window when undated).
-        let anchor = parsed.date.flatMap { GapDetector.parseDate($0) } ?? Date()
+        let candidates = try await candidateExpenses(forReceiptDate: parsed.date)
+        return matcher.match(receipt: parsed, candidates: candidates)
+    }
+
+    /// Candidate expenses to match a receipt against, fetched once per window
+    /// and reused for the rest of the run — a retry pass over hundreds of
+    /// pendings otherwise re-fetches almost the same list hundreds of times.
+    ///
+    /// Dated receipts share one fetch per calendar month, widened on both sides
+    /// by the same 14 days the per-receipt window used. That superset can only
+    /// add expenses further than 14 days from the receipt, and `ReceiptMatcher`
+    /// discards anything beyond its own (narrower) `dateWindowDays`, so the
+    /// match result is identical to fetching each receipt's window separately.
+    /// Undated receipts all anchor on today and share a single fetch.
+    private func candidateExpenses(forReceiptDate date: String?) async throws -> [ZBExpense] {
         let window: TimeInterval = 14 * 24 * 3600
+        let start: Date
+        let end: Date
+        if let date, let anchor = GapDetector.parseDate(date) {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(identifier: "UTC")!
+            let month = calendar.dateInterval(of: .month, for: anchor)
+                ?? DateInterval(start: anchor, duration: 0)
+            start = month.start.addingTimeInterval(-window)
+            end = month.end.addingTimeInterval(window)
+        } else {
+            let anchor = Date()
+            start = anchor.addingTimeInterval(-window)
+            end = anchor.addingTimeInterval(window)
+        }
+
+        let dateStart = Self.dayFormatter.string(from: start)
+        let dateEnd = Self.dayFormatter.string(from: end)
+        let key = "\(dateStart)/\(dateEnd)"
+        if let cached = candidateCache[key] { return cached }
+
+        let fetched = try await zoho.fetchExpenses(dateStart: dateStart, dateEnd: dateEnd)
+        candidateCache[key] = fetched
+        return fetched
+    }
+
+    private static let dayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(identifier: "UTC")!
         formatter.dateFormat = "yyyy-MM-dd"
-
-        let candidates = try await zoho.fetchExpenses(
-            dateStart: formatter.string(from: anchor.addingTimeInterval(-window)),
-            dateEnd: formatter.string(from: anchor.addingTimeInterval(window))
-        )
-        return matcher.match(receipt: parsed, candidates: candidates)
-    }
+        return formatter
+    }()
 
     private func apply(
         outcome: ReceiptMatchOutcome,

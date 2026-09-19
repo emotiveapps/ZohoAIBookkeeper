@@ -95,13 +95,25 @@ struct ReceiptsView: View {
                     Button {
                         Task { await model.retryPending() }
                     } label: {
-                        Label("Retry all pending", systemImage: "arrow.clockwise")
+                        Label("Retry recent", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(model.isWorking)
+
+                    Button {
+                        Task { await model.retryPending(policy: .exhaustive) }
+                    } label: {
+                        Label("Retry every pending", systemImage: "arrow.clockwise.circle")
                     }
                     .disabled(model.isWorking)
                 } header: {
                     Text("Pending (\(model.pending.count))")
                 } footer: {
-                    Text("Waiting for a matching expense in Zoho. Retried automatically on every sync; tap one to match it by hand.")
+                    Text(
+                        "Archived, but waiting for a matching expense in Zoho. "
+                            + "“Retry recent” checks the ones an expense could still be coming for; "
+                            + "“Retry every pending” re-checks all of them — slower, and what to use "
+                            + "after importing a backlog of scanned receipts. Tap one to match it by hand."
+                    )
                 }
             }
 

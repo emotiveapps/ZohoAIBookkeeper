@@ -6,7 +6,7 @@ import BookkeeperCore
 struct Receipts: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Capture emailed receipts and attach them to Zoho expenses as audit documentation",
-        subcommands: [Login.self, Sync.self, List.self, Attach.self],
+        subcommands: [Login.self, Sync.self, Retry.self, List.self, Attach.self],
         defaultSubcommand: Sync.self
     )
 
@@ -84,7 +84,17 @@ struct Receipts: AsyncParsableCommand {
 
     struct Sync: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
-            abstract: "Pull new receipt emails, parse them, and attach matches to Zoho expenses"
+            abstract: "Pull new receipt emails, parse them, and attach matches to Zoho expenses",
+            discussion: """
+                By default this only processes what is new: the mailbox Inbox and \
+                the OneDrive folder. Previously unmatched receipts are left alone, \
+                because re-checking every one of them against Zoho is what makes a \
+                sync slow once the archive is large.
+
+                Use --retry to also re-check recent pendings, or --full after \
+                importing a backlog (a stack of scanned paper receipts, a late \
+                statement) to re-check every pending receipt regardless of age.
+                """
         )
 
         @OptionGroup var options: CommonOptions
@@ -94,6 +104,12 @@ struct Receipts: AsyncParsableCommand {
 
         @Option(name: .long, help: "Re-scan mail from this date (yyyy-MM-dd) instead of the last sync point")
         var since: String?
+
+        @Flag(name: .long, help: "Also re-check recent pending receipts against Zoho")
+        var retry: Bool = false
+
+        @Flag(name: .long, help: "Re-check every pending receipt, however old (use after importing a backlog)")
+        var full: Bool = false
 
         func run() async throws {
             let config = try ConfigLoader.load()
@@ -109,15 +125,7 @@ struct Receipts: AsyncParsableCommand {
                 for warning in report.warnings { print("  \(Terminal.brightYellow)\(warning)\(Terminal.reset)") }
             }
 
-            let sinceDate: Date?
-            if let since {
-                guard let parsed = GapDetector.parseDate(since) else {
-                    throw ValidationError("--since must be yyyy-MM-dd")
-                }
-                sinceDate = parsed
-            } else {
-                sinceDate = nil
-            }
+            let sinceDate = try parsedSince()
 
             // Every sync skips its own retry pass; one shared pass runs at the
             // end instead (the retry pass is the Zoho-API-heavy part).
@@ -137,7 +145,7 @@ struct Receipts: AsyncParsableCommand {
                 lastPipeline = pipeline
 
                 let summary = try await pipeline.sync(dryRun: dryRun, since: sinceDate, runRetryPass: false)
-                printSummary(summary, scanned: "message(s)")
+                Receipts.printSummary(summary, scanned: "message(s)")
             }
 
             if let onedrive {
@@ -155,13 +163,11 @@ struct Receipts: AsyncParsableCommand {
                 )
                 lastPipeline = pipeline
                 let summary = try await pipeline.syncDrive(dryRun: dryRun, runRetryPass: false)
-                printSummary(summary, scanned: "file(s)")
+                Receipts.printSummary(summary, scanned: "file(s)")
             }
 
-            if let lastPipeline, !dryRun {
-                print("\n\(Terminal.bold)Retry pass\(Terminal.reset)")
-                let summary = try await lastPipeline.retryPending()
-                printSummary(summary, scanned: "receipt(s)")
+            if !dryRun {
+                try await runRetryPass(lastPipeline)
             }
 
             if let engine = await store.syncEngine {
@@ -173,19 +179,113 @@ struct Receipts: AsyncParsableCommand {
             print("\nArchive cache: \(store.rootURL.path)")
         }
 
-        private func printSummary(_ summary: ReceiptPipeline.SyncSummary, scanned: String) {
-            for line in summary.lines {
-                print("  \(line)")
+        private func parsedSince() throws -> Date? {
+            guard let since else { return nil }
+            guard let parsed = GapDetector.parseDate(since) else {
+                throw ValidationError("--since must be yyyy-MM-dd")
             }
-            print("  \(Terminal.dim)\(summary.messagesSeen) \(scanned) scanned, \(summary.movedMessages) filed\(Terminal.reset)")
-            var line = "  \(Terminal.brightGreen)\(summary.matched) matched\(Terminal.reset)"
-                + " · \(Terminal.brightYellow)\(summary.ambiguous) ambiguous\(Terminal.reset)"
-                + " · \(summary.pending) pending · \(summary.newReceipts) new receipt(s)"
-            if summary.errors > 0 {
-                line += " · \(Terminal.brightRed)\(summary.errors) error(s)\(Terminal.reset)"
-            }
-            print(line)
+            return parsed
         }
+
+        /// The retry pass is the Zoho-API-heavy part — one expense fetch per
+        /// pending receipt — so it is opt-in. New mail is matched either way.
+        private func runRetryPass(_ pipeline: ReceiptPipeline?) async throws {
+            guard let pipeline, retry || full else {
+                print(
+                    "\n\(Terminal.dim)Pending receipts not re-checked"
+                        + " (--retry, or --full after a backlog import)\(Terminal.reset)"
+                )
+                return
+            }
+            print("\n\(Terminal.bold)Retry pass\(full ? " (full)" : "")\(Terminal.reset)")
+            let summary = try await pipeline.retryPending(policy: full ? .exhaustive : .standard)
+            Receipts.printSummary(summary, scanned: "receipt(s)")
+        }
+    }
+
+    // MARK: - Retry
+
+    struct Retry: AsyncParsableCommand {
+        static let configuration = CommandConfiguration(
+            abstract: "Re-check pending receipts against Zoho and attach any that now match",
+            discussion: """
+                A pending receipt is one that is archived but has no Zoho expense \
+                to attach it to yet — usually because the bank feed hasn't caught \
+                up. This pass looks again.
+
+                By default it only re-checks receipts that still plausibly have an \
+                expense coming (recent, and not already tried several times). Pass \
+                --all to re-check every pending receipt however old: the run to make \
+                after scanning in a stack of paper receipts, or after importing a \
+                statement that finally recorded the expenses.
+                """
+        )
+
+        @OptionGroup var options: CommonOptions
+
+        @Flag(name: .long, help: "Re-check every pending receipt, however old or often tried")
+        var all: Bool = false
+
+        @Flag(name: .long, help: "Clear the per-receipt attempt counts before retrying")
+        var resetBudget: Bool = false
+
+        func run() async throws {
+            let config = try ConfigLoader.load()
+            let zoho = try await createZohoClient(config: config, verbose: options.verbose)
+            let store = try Receipts.store(for: config)
+
+            guard let mailbox = config.receipts?.mailboxes.first else {
+                throw ValidationError("No receipt mailboxes configured.")
+            }
+
+            if let engine = await store.syncEngine {
+                let report = try await engine.pull()
+                print("\(Terminal.dim)archive pull: \(report.downloaded) downloaded\(Terminal.reset)")
+            }
+
+            let syncState = try Receipts.syncState()
+            if resetBudget {
+                var ledger = ReceiptRetryLedger.load(from: syncState)
+                ledger.reset()
+                ledger.save(to: syncState)
+                print("\(Terminal.dim)retry budget cleared\(Terminal.reset)")
+            }
+
+            let pipeline = ReceiptPipeline(
+                graph: MicrosoftGraphMailClient(config: mailbox),
+                driveFolder: config.receipts?.onedrive?.folderPath,
+                parser: ReceiptParser(apiKey: config.anthropic.apiKey),
+                store: store,
+                syncState: syncState,
+                zoho: zoho
+            )
+
+            print("\n\(Terminal.bold)Retry pass\(all ? " (all pending)" : "")\(Terminal.reset)")
+            let summary = try await pipeline.retryPending(policy: all ? .exhaustive : .standard)
+            Receipts.printSummary(summary, scanned: "receipt(s)")
+
+            if let engine = await store.syncEngine {
+                let report = try await engine.push()
+                print("\n\(Terminal.dim)archive push: \(report.uploaded) uploaded\(Terminal.reset)")
+            }
+        }
+    }
+
+    static func printSummary(_ summary: ReceiptPipeline.SyncSummary, scanned: String) {
+        for line in summary.lines {
+            print("  \(line)")
+        }
+        print("  \(Terminal.dim)\(summary.messagesSeen) \(scanned) scanned, \(summary.movedMessages) filed\(Terminal.reset)")
+        var line = "  \(Terminal.brightGreen)\(summary.matched) matched\(Terminal.reset)"
+            + " · \(Terminal.brightYellow)\(summary.ambiguous) ambiguous\(Terminal.reset)"
+            + " · \(summary.pending) pending · \(summary.newReceipts) new receipt(s)"
+        if summary.deferredRetries > 0 {
+            line += " · \(Terminal.dim)\(summary.deferredRetries) held back\(Terminal.reset)"
+        }
+        if summary.errors > 0 {
+            line += " · \(Terminal.brightRed)\(summary.errors) error(s)\(Terminal.reset)"
+        }
+        print(line)
     }
 
     // MARK: - List

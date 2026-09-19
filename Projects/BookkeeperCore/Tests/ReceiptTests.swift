@@ -446,3 +446,98 @@ struct GraphTokenTests {
         #expect(expired.needsRefresh(now: now))
     }
 }
+
+@Suite("ReceiptRetryPolicy")
+struct ReceiptRetryPolicyTests {
+    private func record(id: String = "r1", date: String?, createdAt: Date = Date()) -> ReceiptRecord {
+        ReceiptRecord(
+            id: id,
+            relativePath: "2026/x.pdf",
+            source: ReceiptRecord.Source(kind: "email"),
+            parsed: ParsedReceipt(vendor: "Amazon", date: date, total: 10, confidence: 90),
+            status: .pending,
+            createdAt: createdAt
+        )
+    }
+
+    @Test("The standard budget retries recent receipts")
+    func retriesRecent() {
+        let now = Date()
+        let fresh = record(date: nil, createdAt: now.addingTimeInterval(-3 * 24 * 3600))
+        #expect(ReceiptRetryPolicy.standard.allows(fresh, attempts: 0, now: now))
+        #expect(ReceiptRetryPolicy.standard.allows(fresh, attempts: 2, now: now))
+    }
+
+    @Test("The standard budget drops receipts older than its window")
+    func dropsStale() {
+        let now = Date()
+        let stale = record(date: nil, createdAt: now.addingTimeInterval(-200 * 24 * 3600))
+        #expect(ReceiptRetryPolicy.standard.allows(stale, attempts: 0, now: now) == false)
+        #expect(ReceiptRetryPolicy.exhaustive.allows(stale, attempts: 99, now: now))
+    }
+
+    @Test("The standard budget gives up after repeated failures")
+    func dropsExhausted() {
+        let now = Date()
+        let fresh = record(date: nil, createdAt: now.addingTimeInterval(-1 * 24 * 3600))
+        #expect(ReceiptRetryPolicy.standard.allows(fresh, attempts: 4, now: now))
+        #expect(ReceiptRetryPolicy.standard.allows(fresh, attempts: 5, now: now) == false)
+        #expect(ReceiptRetryPolicy.exhaustive.allows(fresh, attempts: 5, now: now))
+    }
+
+    @Test("Ageing prefers the receipt's own date over when it was archived")
+    func ageingPrefersReceiptDate() {
+        // Archived today, but the receipt itself is from 2022: too old to retry.
+        let scanned = record(date: "2022-01-22", createdAt: Date())
+        #expect(ReceiptRetryPolicy.standard.allows(scanned, attempts: 0) == false)
+        #expect(ReceiptRetryPolicy.exhaustive.allows(scanned, attempts: 0))
+    }
+}
+
+@Suite("ReceiptRetryLedger")
+struct ReceiptRetryLedgerTests {
+    private func makeState() throws -> (FileSyncState, URL) {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("retry-ledger-tests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return (FileSyncState(url: dir.appendingPathComponent("state.json")), dir)
+    }
+
+    @Test("Attempt counts round-trip through the sync store")
+    func roundTrips() throws {
+        let (state, dir) = try makeState()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        var ledger = ReceiptRetryLedger.load(from: state)
+        #expect(ledger.attemptCount(for: "a") == 0)
+        ledger.recordFailure(for: "a")
+        ledger.recordFailure(for: "a")
+        ledger.recordFailure(for: "b")
+        ledger.save(to: state)
+
+        let reloaded = ReceiptRetryLedger.load(from: state)
+        #expect(reloaded.attemptCount(for: "a") == 2)
+        #expect(reloaded.attemptCount(for: "b") == 1)
+        #expect(reloaded.attemptCount(for: "c") == 0)
+    }
+
+    @Test("A match clears that receipt's history; reset clears everything")
+    func clearing() throws {
+        let (state, dir) = try makeState()
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        var ledger = ReceiptRetryLedger()
+        ledger.recordFailure(for: "a")
+        ledger.recordFailure(for: "b")
+        ledger.clear(for: "a")
+        #expect(ledger.attemptCount(for: "a") == 0)
+        #expect(ledger.attemptCount(for: "b") == 1)
+
+        ledger.reset()
+        #expect(ledger.attemptCount(for: "b") == 0)
+
+        // An empty ledger persists as empty rather than as absent state.
+        ledger.save(to: state)
+        #expect(ReceiptRetryLedger.load(from: state).attemptCount(for: "b") == 0)
+    }
+}

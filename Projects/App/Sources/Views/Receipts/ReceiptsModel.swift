@@ -58,15 +58,25 @@ final class ReceiptsModel {
         await refresh()
     }
 
-    func retryPending() async {
+    /// Re-check pending receipts against Zoho.
+    ///
+    /// - Parameter policy: `.standard` skips receipts that are old or have
+    ///   already failed several times — the routine tap. `.exhaustive` re-checks
+    ///   every pending receipt, for after a backlog of scanned paper receipts
+    ///   has been imported.
+    func retryPending(policy: ReceiptRetryPolicy = .standard) async {
         guard let pipeline = workspace.receiptPipeline, !isWorking else { return }
         isWorking = true
         defer { isWorking = false }
         do {
-            let summary = try await pipeline.retryPending()
-            statusLine = summary.retriedMatches > 0
-                ? "Matched \(summary.retriedMatches) receipt(s)"
-                : "No new matches yet"
+            let summary = try await pipeline.retryPending(policy: policy)
+            if summary.retriedMatches > 0 {
+                statusLine = "Matched \(summary.retriedMatches) receipt(s)"
+            } else if summary.deferredRetries > 0 {
+                statusLine = "No new matches — \(summary.deferredRetries) held back, try “Retry every pending”"
+            } else {
+                statusLine = "No new matches yet"
+            }
         } catch {
             statusLine = error.localizedDescription
         }

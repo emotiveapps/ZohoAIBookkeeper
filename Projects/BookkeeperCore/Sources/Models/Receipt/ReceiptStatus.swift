@@ -1,7 +1,8 @@
 import Foundation
 
 public enum ReceiptStatus: String, Codable, Sendable {
-    /// No matching Zoho expense yet — retried on every sync.
+    /// No matching Zoho expense yet — re-checked by the retry pass, within
+    /// the budget in `ReceiptRetryPolicy`.
     case pending
     /// Multiple plausible expenses — needs a human decision (`receipts attach`).
     case ambiguous
