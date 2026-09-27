@@ -1,46 +1,17 @@
+# Template: copy this file into a child repo as `.swiftlint.yml`.
+#
+# All shared rules and thresholds come from the remote parent config below.
+# SwiftLint fetches it over HTTPS on the first run and caches it; keep this
+# file to repo-specific additions only (extra excluded paths, opt-in rules
+# the repo wants, etc.). Anything set here overrides the parent.
+parent_config: https://raw.githubusercontent.com/emotiveapps/codestyle/main/swift/.swiftlint.yml
+
+# Exclusions live here, not in the parent: a parent's paths resolve against the parent's location and
+# never reach this repo. Globs, not bare names: a bare `.build` covers only the root's, not every
+# package's below it, and `swiftlint --fix` would then rewrite third-party checkouts.
+# Add paths this repo alone needs skipped below these.
 excluded:
-  - .build
-
-disabled_rules:
-  # This is necessary when trying to keep long function signatures below 120 characters per line.
-  - opening_brace
-
-# Owner's policy (Aug 2026): size/complexity rules are warning-only — they
-# nag at the given thresholds but never fail the build. Only short
-# identifiers and line length keep error levels.
-identifier_name:
-  min_length:
-    warning: 2  # single-char loop indices warn, never error
-    error: 1
-line_length:
-  warning: 140
-  error: 200
-nesting:
-  type_level:
-    warning: 2  # nested Decodable response types are idiomatic
-large_tuple:
-  warning: 4
-  error: 10000  # never an error
-function_body_length:
-  warning: 60
-  error: 10000  # never an error
-type_body_length:
-  warning: 350
-  error: 10000  # never an error
-cyclomatic_complexity:
-  warning: 12
-  error: 10000  # never an error
-
-opt_in_rules:
-  - number_separator
-
-number_separator:
-  minimum_length: 6  # Numbers with 6+ digits will require underscores
-
-custom_rules:
-  warnings_need_todo_prefix:
-    included: ".*.swift"
-    name: "Warning"
-    regex: '(#warning\(")(?![ ]*TODO)'
-    message: "Manual compiler warnings must start their message with \"TODO\" as a prefix."
-    severity: error
+  - "**/.build"
+  - "**/.build-linux"
+  - "**/.swiftpm"
+  - "**/Derived"
