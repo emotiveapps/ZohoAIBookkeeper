@@ -1,0 +1,67 @@
+name: Review
+
+# Every pull request is reviewed once by enderbot-reviewer when it is opened, reopened or marked ready
+# for review; drafts are skipped. It does not run again on every push: flip the PR to draft and back,
+# or re-run this workflow, to ask for a fresh review. The review only comments. It never approves,
+# requests changes, commits or pushes, and nothing it raises is fixed without Andrew's approval.
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: enderbot-reviewer
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # The review posts as the enderbot-reviewer app, whose token can read contents and write pull
+      # requests and nothing else, so its reviews look like the ones run by hand.
+      - name: Token for enderbot-reviewer
+        id: reviewer
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENDERBOT_REVIEWER_APP_ID }}
+          private-key: ${{ secrets.ENDERBOT_REVIEWER_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.reviewer.outputs.token }}
+          claude_args: >-
+            --allowedTools "Read,Glob,Grep,Bash(git diff:*),Bash(git show:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh api:*)"
+          prompt: |
+            Review pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}
+            (base ${{ github.event.pull_request.base.ref }}, head ${{ github.event.pull_request.head.ref }}).
+            You only read and comment: never edit files, commit, push, approve, request changes or merge.
+
+            1. Read the diff with `gh pr diff ${{ github.event.pull_request.number }}`. It is against the PR's own
+               base, which may be another PR's branch in a stack; review only this PR's changes.
+            2. Read the rules first: CLAUDE.md, AGENTS.md and README.md, plus CODE_REVIEW.md,
+               .github/copilot-instructions.md and every .github/instructions/*.instructions.md whose `applyTo`
+               glob matches a changed file, where they exist. They are this repository's own rules and traps;
+               a breach of one is a finding.
+            3. Look for real defects first: correctness, concurrency, broken invariants, security and secrets,
+               migrations, tests that don't test what they claim, and breaches of those rules. Then lesser points
+               only if they matter. Verify every finding against the code at the PR's head before reporting it,
+               and drop anything you cannot substantiate. At most about eight inline comments, most important
+               first.
+            4. Post exactly one review with event COMMENT, using
+               `gh api -X POST repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews --input <file>`
+               with a JSON body {"event":"COMMENT","body":...,"comments":[{"path","line","side":"RIGHT","body"}]}.
+               Inline comments only on lines that are in the diff; otherwise put the point in the body.
+               Body: a one-line verdict; "Findings", numbered, each with severity (high, medium, low), file:line,
+               why it matters and a suggested fix; then "Checked and fine", a short list of what you verified.
+               If nothing material turned up, say so. Plain, direct sentences.
